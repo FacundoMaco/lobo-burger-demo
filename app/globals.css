@@ -1,26 +1,134 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-bebas);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --background: #B71C1C;
+  --foreground: #FFFFFF;
+  --card: #9B1515;
+  --card-foreground: #FFFFFF;
+  --popover: #9B1515;
+  --popover-foreground: #FFFFFF;
+  --primary: #FFD600;
+  --primary-foreground: #7B0000;
+  --secondary: #8B0000;
+  --secondary-foreground: #FFFFFF;
+  --muted: #8B0000;
+  --muted-foreground: #FFCDD2;
+  --accent: #FFD600;
+  --accent-foreground: #7B0000;
+  --destructive: #7B0000;
+  --border: rgba(255, 214, 0, 0.25);
+  --input: #8B0000;
+  --ring: #FFD600;
+  --radius: 0.5rem;
+  --sidebar: #8B0000;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #FFD600;
+  --sidebar-primary-foreground: #7B0000;
+  --sidebar-accent: #7B0000;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 214, 0, 0.2);
+  --sidebar-ring: #FFD600;
+  --lobo-red: #B71C1C;
+  --lobo-yellow: #FFD600;
+  --lobo-dark: #7B0000;
+  --lobo-card: #9B1515;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    background-color: #B71C1C;
+    color: #FFFFFF;
+    font-family: var(--font-sans);
+  }
+  html {
+    color-scheme: dark;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(192, 57, 43, 0); }
 }
+
+.pulse-red {
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-yellow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(243, 156, 18, 0); }
+}
+
+.pulse-yellow {
+  animation: pulse-yellow 2s infinite;
+}
+
+.font-bebas {
+  font-family: var(--font-bebas), 'Impact', 'Arial Black', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.card-lobo {
+  background: #9B1515;
+  border: 1px solid rgba(255, 214, 0, 0.25);
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.card-lobo:hover {
+  border-color: rgba(255, 214, 0, 0.8);
+  transform: translateY(-2px);
+}
+
+.gradient-hero {
+  background: linear-gradient(135deg, #7B0000 0%, #B71C1C 50%, #FFD600 100%);
+}
+
+.text-red-lobo { color: #B71C1C; }
+.text-yellow-lobo { color: #FFD600; }
+.bg-red-lobo { background-color: #B71C1C; }
+.bg-yellow-lobo { background-color: #FFD600; }
+.border-red-lobo { border-color: #B71C1C; }
+.border-yellow-lobo { border-color: #FFD600; }
