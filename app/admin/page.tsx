@@ -3,30 +3,29 @@
 import { useState, useEffect, useCallback } from "react";
 import { getOrders, updateOrderStatus, saveOrder } from "@/lib/orders-store";
 import type { Order, OrderStatus } from "@/lib/orders-store";
-import { LayoutDashboard, ShoppingBag, Users, RefreshCw } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Users, RefreshCw, ClipboardCheck, Check, X } from "lucide-react";
 
 const YELLOW = "#FFD600";
 
-type Tab = "dashboard" | "pedidos" | "clientes";
+type Tab = "dashboard" | "pedidos" | "clientes" | "validar";
 
 const statusConfig: Record<OrderStatus, { label: string; border: string; bg: string; next: OrderStatus | null }> = {
-  pendiente:       { label: "Pendiente",       border: "#FFD600", bg: "rgba(255,214,0,0.1)",  next: "en_preparacion" },
-  en_preparacion:  { label: "En preparacion",  border: "#F39C12", bg: "rgba(243,156,18,0.1)", next: "listo" },
-  listo:           { label: "Listo",           border: "#2ecc71", bg: "rgba(46,204,113,0.1)", next: "entregado" },
-  entregado:       { label: "Entregado",       border: "#555",    bg: "rgba(80,80,80,0.1)",   next: null },
+  pendiente:      { label: "Pendiente",      border: "#FFD600", bg: "rgba(255,214,0,0.1)",  next: "en_preparacion" },
+  en_preparacion: { label: "En preparacion", border: "#F39C12", bg: "rgba(243,156,18,0.1)", next: "listo"          },
+  listo:          { label: "Listo",          border: "#2ecc71", bg: "rgba(46,204,113,0.1)", next: "entregado"      },
+  entregado:      { label: "Entregado",      border: "#555",    bg: "rgba(80,80,80,0.1)",   next: null             },
 };
 
 function timeAgo(iso: string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60) return "hace un momento";
-  if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`;
+  if (diff < 60)    return "hace un momento";
+  if (diff < 3600)  return `hace ${Math.floor(diff / 60)} min`;
   if (diff < 86400) return `hace ${Math.floor(diff / 3600)} h`;
   return `hace ${Math.floor(diff / 86400)} d`;
 }
 
 function isToday(iso: string): boolean {
-  const d = new Date(iso);
-  const now = new Date();
+  const d = new Date(iso), now = new Date();
   return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
 }
 
@@ -45,13 +44,249 @@ function generateMockOrder(): void {
     phone: `9${Math.floor(10000000 + Math.random() * 89999999)}`,
     delivery: Math.random() > 0.5,
     address: "Av. Los Heroes 123",
-    items,
-    total,
+    items, total,
   });
 }
 
+// ─── ValidarTab ───────────────────────────────────────────────────────────────
+
+type Toast = { ok: boolean; text: string };
+type RedeemLookup = {
+  valid: boolean;
+  code: string;
+  rewardName: string;
+  rewardPts: number;
+  clientName: string;
+  clientPhone: string;
+} | null;
+
+function ValidarTab() {
+  const [phone,   setPhone]   = useState("");
+  const [amount,  setAmount]  = useState("");
+  const [orderId, setOrderId] = useState("");
+  const [toast,   setToast]   = useState<Toast | null>(null);
+
+  const [redeemCode,   setRedeemCode]   = useState("");
+  const [redeemLookup, setRedeemLookup] = useState<RedeemLookup>(null);
+
+  const showToast = (t: Toast) => {
+    setToast(t);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleAddPoints = () => {
+    const pts = Math.floor(parseFloat(amount));
+    if (!pts || pts <= 0 || !phone.trim()) return;
+    try {
+      const raw = localStorage.getItem("lobo_member");
+      if (raw) {
+        const m = JSON.parse(raw);
+        if (m.phone === phone.trim()) {
+          m.points = (m.points ?? 0) + pts;
+          m.history = m.history ?? [];
+          m.history.unshift({
+            date: new Date().toLocaleDateString("es-PE"),
+            desc: orderId.trim() ? `Pedido ${orderId.trim()}` : "Pedido validado",
+            pts,
+          });
+          localStorage.setItem("lobo_member", JSON.stringify(m));
+
+          if (orderId.trim()) {
+            updateOrderStatus(orderId.trim() as string, "entregado");
+          }
+
+          showToast({ ok: true, text: `+${pts} Wolfpoints → ${m.name}` });
+          setPhone(""); setAmount(""); setOrderId("");
+          return;
+        }
+      }
+      showToast({ ok: false, text: "Cliente no encontrado en La Manada — puedes registrar el pedido igualmente" });
+    } catch {
+      showToast({ ok: false, text: "Error al procesar" });
+    }
+  };
+
+  const handleVerify = () => {
+    const code = redeemCode.trim().toUpperCase();
+    if (!code) return;
+    try {
+      const list = JSON.parse(localStorage.getItem("lobo_redemptions") || "[]");
+      const found = list.find((r: { code: string; usedAt: string | null }) => r.code === code);
+      if (found && !found.usedAt) {
+        setRedeemLookup({ valid: true, code: found.code, rewardName: found.rewardName, rewardPts: found.rewardPts, clientName: found.clientName, clientPhone: found.clientPhone });
+      } else {
+        setRedeemLookup({ valid: false, code: "", rewardName: "", rewardPts: 0, clientName: "", clientPhone: "" });
+      }
+    } catch {
+      setRedeemLookup({ valid: false, code: "", rewardName: "", rewardPts: 0, clientName: "", clientPhone: "" });
+    }
+  };
+
+  const handleMarkUsed = () => {
+    if (!redeemLookup?.valid) return;
+    try {
+      const list = JSON.parse(localStorage.getItem("lobo_redemptions") || "[]");
+      const updated = list.map((r: { code: string; usedAt: string | null }) =>
+        r.code === redeemLookup.code ? { ...r, usedAt: new Date().toISOString() } : r
+      );
+      localStorage.setItem("lobo_redemptions", JSON.stringify(updated));
+
+      // Descontar puntos del miembro
+      const raw = localStorage.getItem("lobo_member");
+      if (raw) {
+        const m = JSON.parse(raw);
+        if (m.phone === redeemLookup.clientPhone) {
+          m.points = Math.max(0, (m.points ?? 0) - redeemLookup.rewardPts);
+          m.history = m.history ?? [];
+          m.history.unshift({
+            date: new Date().toLocaleDateString("es-PE"),
+            desc: `Canje: ${redeemLookup.rewardName}`,
+            pts: -redeemLookup.rewardPts,
+          });
+          localStorage.setItem("lobo_member", JSON.stringify(m));
+        }
+      }
+
+      showToast({ ok: true, text: `Canje marcado como usado — ${redeemLookup.rewardName}` });
+      setRedeemLookup(null);
+      setRedeemCode("");
+    } catch {
+      showToast({ ok: false, text: "Error al marcar canje" });
+    }
+  };
+
+  const sectionTitle = "text-sm font-bold text-white mb-3";
+  const inputCls = "w-full rounded-lg py-2.5 px-3 text-sm text-white outline-none";
+  const inputStyle = { background: "#0a0a0a", border: "1px solid #252525" };
+
+  return (
+    <div className="max-w-lg">
+      <h1 className="font-bebas text-3xl md:text-4xl tracking-widest mb-6">
+        VALIDAR <span style={{ color: "#DC2626" }}>CONSUMO</span>
+      </h1>
+
+      {toast && (
+        <div
+          className="flex items-center gap-2 rounded-lg px-4 py-3 mb-5 text-sm font-semibold"
+          style={{
+            background: toast.ok ? "rgba(46,204,113,0.1)" : "rgba(220,38,38,0.1)",
+            border: `1px solid ${toast.ok ? "rgba(46,204,113,0.3)" : "rgba(220,38,38,0.3)"}`,
+            color: toast.ok ? "#2ecc71" : "#DC2626",
+          }}
+        >
+          {toast.ok ? <Check size={16} /> : <X size={16} />}
+          {toast.text}
+        </div>
+      )}
+
+      {/* A) Agregar puntos */}
+      <div className="rounded-xl p-5 mb-5" style={{ background: "#141414", border: "1px solid #1f1f1f" }}>
+        <p className={sectionTitle}>Validar pedido de WhatsApp</p>
+        <div className="h-px mb-4" style={{ background: "#1f1f1f" }} />
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-xs mb-1.5 block" style={{ color: "#555" }}>Teléfono del cliente</label>
+            <input
+              type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+              placeholder="9XXXXXXXX" className={inputCls} style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="text-xs mb-1.5 block" style={{ color: "#555" }}>Monto del pedido (S/)</label>
+            <input
+              type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00" min={1} className={inputCls} style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="text-xs mb-1.5 block" style={{ color: "#555" }}>ID pedido WhatsApp (opcional)</label>
+            <input
+              type="text" value={orderId} onChange={(e) => setOrderId(e.target.value)}
+              placeholder="LB-1234567890" className={inputCls} style={inputStyle}
+            />
+          </div>
+          <button
+            onClick={handleAddPoints}
+            disabled={!phone.trim() || !amount || parseFloat(amount) <= 0}
+            className="w-full py-3 rounded-lg font-bold text-sm transition-all hover:opacity-80 disabled:opacity-30 mt-1"
+            style={{ background: "#2ecc71", color: "#0a0a0a" }}
+          >
+            Validar y agregar puntos
+          </button>
+        </div>
+      </div>
+
+      {/* B) Validar canje */}
+      <div className="rounded-xl p-5" style={{ background: "#141414", border: "1px solid #1f1f1f" }}>
+        <p className={sectionTitle}>Validar código de canje</p>
+        <div className="h-px mb-4" style={{ background: "#1f1f1f" }} />
+        <div>
+          <label className="text-xs mb-1.5 block" style={{ color: "#555" }}>Código del cliente</label>
+          <input
+            type="text" value={redeemCode}
+            onChange={(e) => { setRedeemCode(e.target.value); setRedeemLookup(null); }}
+            placeholder="WP-ABCD-1234"
+            className={`${inputCls} uppercase tracking-widest font-bold`}
+            style={inputStyle}
+          />
+        </div>
+        <button
+          onClick={handleVerify}
+          disabled={!redeemCode.trim()}
+          className="w-full py-3 rounded-lg font-bold text-sm transition-all hover:opacity-80 disabled:opacity-30 mt-3"
+          style={{ background: "#FFD600", color: "#0a0a0a" }}
+        >
+          Verificar código
+        </button>
+
+        {redeemLookup && (
+          <div
+            className="rounded-lg p-4 mt-4"
+            style={{
+              background: redeemLookup.valid ? "rgba(46,204,113,0.07)" : "rgba(220,38,38,0.07)",
+              border: `1px solid ${redeemLookup.valid ? "rgba(46,204,113,0.3)" : "rgba(220,38,38,0.3)"}`,
+            }}
+          >
+            {redeemLookup.valid ? (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <Check size={16} style={{ color: "#2ecc71" }} />
+                  <span className="font-bold text-sm" style={{ color: "#2ecc71" }}>CÓDIGO VÁLIDO</span>
+                </div>
+                <p className="text-sm text-white font-semibold">{redeemLookup.rewardName}</p>
+                <p className="text-xs mt-1" style={{ color: "#888" }}>
+                  Cliente: {redeemLookup.clientName} — {redeemLookup.clientPhone}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "#555" }}>
+                  Descuento: {redeemLookup.rewardPts} Wolfpoints
+                </p>
+                <button
+                  onClick={handleMarkUsed}
+                  className="w-full py-2.5 rounded-lg font-bold text-sm mt-4 transition-all hover:opacity-80"
+                  style={{ background: "#2ecc71", color: "#0a0a0a" }}
+                >
+                  Marcar como canjeado
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <X size={16} style={{ color: "#DC2626" }} />
+                <span className="text-sm font-bold" style={{ color: "#DC2626" }}>
+                  Código no válido o ya fue canjeado
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── AdminPage ────────────────────────────────────────────────────────────────
+
 export default function AdminPage() {
-  const [tab, setTab] = useState<Tab>("dashboard");
+  const [tab,    setTab]    = useState<Tab>("dashboard");
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<OrderStatus | "todos">("todos");
 
@@ -69,18 +304,18 @@ export default function AdminPage() {
   };
 
   const todayOrders = orders.filter(o => isToday(o.createdAt));
-  const todayTotal = todayOrders.reduce((s, o) => s + o.total, 0);
-  const pending = orders.filter(o => o.status === "pendiente").length;
+  const todayTotal  = todayOrders.reduce((s, o) => s + o.total, 0);
+  const pending     = orders.filter(o => o.status === "pendiente").length;
 
   const navItems: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "pedidos", label: "Pedidos", icon: ShoppingBag },
-    { id: "clientes", label: "Clientes", icon: Users },
+    { id: "dashboard", label: "Dashboard",  icon: LayoutDashboard },
+    { id: "pedidos",   label: "Pedidos",    icon: ShoppingBag     },
+    { id: "clientes",  label: "Clientes",   icon: Users           },
+    { id: "validar",   label: "Validar",    icon: ClipboardCheck  },
   ];
 
   const filteredOrders = filter === "todos" ? orders : orders.filter(o => o.status === filter);
 
-  // Unique clients
   const clientMap: Record<string, { name: string; phone: string; count: number; total: number }> = {};
   for (const o of orders) {
     if (!clientMap[o.phone]) clientMap[o.phone] = { name: o.name, phone: o.phone, count: 0, total: 0 };
@@ -104,9 +339,9 @@ export default function AdminPage() {
               onClick={() => setTab(id)}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-semibold transition-all text-left"
               style={{
-                background: tab === id ? "rgba(192,57,43,0.15)" : "transparent",
-                color: tab === id ? "#C0392B" : "#666",
-                borderLeft: tab === id ? "2px solid #C0392B" : "2px solid transparent",
+                background:  tab === id ? "rgba(192,57,43,0.15)" : "transparent",
+                color:       tab === id ? "#C0392B" : "#666",
+                borderLeft:  tab === id ? "2px solid #C0392B" : "2px solid transparent",
               }}
             >
               <Icon size={16} />
@@ -160,10 +395,10 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
                 {[
-                  { label: "Pedidos pendientes", value: String(pending), color: pending > 0 ? "#C0392B" : "#555" },
-                  { label: "Pedidos hoy", value: String(todayOrders.length), color: YELLOW },
-                  { label: "Total vendido hoy", value: `S/${todayTotal}`, color: "#2ecc71" },
-                  { label: "Pedidos totales", value: String(orders.length), color: "#4a9eed" },
+                  { label: "Pedidos pendientes", value: String(pending),           color: pending > 0 ? "#C0392B" : "#555" },
+                  { label: "Pedidos hoy",         value: String(todayOrders.length), color: YELLOW    },
+                  { label: "Total vendido hoy",   value: `S/${todayTotal}`,          color: "#2ecc71" },
+                  { label: "Pedidos totales",     value: String(orders.length),      color: "#4a9eed" },
                 ].map(s => (
                   <div key={s.label} className="rounded-xl p-4" style={{ background: "#141414", border: "1px solid #1f1f1f" }}>
                     <p className="text-xs mb-2" style={{ color: "#555" }}>{s.label}</p>
@@ -208,17 +443,13 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Filtros */}
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-5">
                 {(["todos", "pendiente", "en_preparacion", "listo", "entregado"] as const).map(f => (
                   <button
                     key={f}
                     onClick={() => setFilter(f)}
                     className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
-                    style={{
-                      background: filter === f ? YELLOW : "#1a1a1a",
-                      color: filter === f ? "#7B0000" : "#666",
-                    }}
+                    style={{ background: filter === f ? YELLOW : "#1a1a1a", color: filter === f ? "#7B0000" : "#666" }}
                   >
                     {f === "todos" ? "Todos" : statusConfig[f].label}
                   </button>
@@ -261,7 +492,6 @@ export default function AdminPage() {
                             <p className="text-xs mt-1" style={{ color: "#555" }}>{timeAgo(o.createdAt)}</p>
                           </div>
                         </div>
-
                         <div className="mb-3">
                           {o.items.map((item, i) => (
                             <p key={i} className="text-xs" style={{ color: "#888" }}>
@@ -269,7 +499,6 @@ export default function AdminPage() {
                             </p>
                           ))}
                         </div>
-
                         <div className="flex items-center justify-between">
                           <span className="font-bebas text-xl" style={{ color: YELLOW }}>Total S/{o.total}</span>
                           {cfg.next && (
@@ -332,6 +561,9 @@ export default function AdminPage() {
               )}
             </div>
           )}
+
+          {/* VALIDAR */}
+          {tab === "validar" && <ValidarTab />}
 
         </main>
       </div>
