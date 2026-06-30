@@ -2,43 +2,44 @@
 
 import { useState } from "react";
 import { Navbar } from "@/components/navbar";
-import { Trophy, Gift, ChevronRight, X, ShoppingBag } from "lucide-react";
+import { Trophy, Gift, ChevronRight, X, ShoppingBag, Star, Shield, Zap, Crown, UtensilsCrossed, Percent, Check, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const LEVELS = [
-  { name: "Cachorro", min: 0, max: 99, color: "#888", emoji: "🐶" },
-  { name: "Lobo", min: 100, max: 299, color: "#4a9eed", emoji: "🐺" },
-  { name: "Alpha", min: 300, max: 599, color: "#C0392B", emoji: "🔴" },
-  { name: "Jefe de Manada", min: 600, max: Infinity, color: "#F39C12", emoji: "👑" },
+const LEVELS: { name: string; min: number; max: number; color: string; icon: LucideIcon }[] = [
+  { name: "Cachorro", min: 0, max: 99, color: "#888", icon: Star },
+  { name: "Lobo", min: 100, max: 299, color: "#4a9eed", icon: Shield },
+  { name: "Alpha", min: 300, max: 599, color: "#DC2626", icon: Zap },
+  { name: "Jefe de Manada", min: 600, max: Infinity, color: "#FFD600", icon: Crown },
 ];
 
-const rewards = [
+const rewards: { id: number; pts: number; title: string; description: string; icon: LucideIcon }[] = [
   {
     id: 1,
     pts: 50,
     title: "Salchipapa Clásica",
     description: "Gratis con tu próximo pedido",
-    emoji: "🍟",
+    icon: UtensilsCrossed,
   },
   {
     id: 2,
     pts: 100,
     title: "–15% en tu pedido",
     description: "Descuento directo al total",
-    emoji: "💸",
+    icon: Percent,
   },
   {
     id: 3,
     pts: 200,
     title: "Combo Lobo Gratis",
     description: "Hamburguesa + salchipapa + gaseosa",
-    emoji: "🎁",
+    icon: Gift,
   },
   {
     id: 4,
     pts: 500,
     title: "La Bestia Gratis",
     description: "La más salvaje, sin costo",
-    emoji: "🏆",
+    icon: Trophy,
   },
 ];
 
@@ -124,10 +125,15 @@ export default function PuntosPage() {
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <span className="text-3xl">{level.emoji}</span>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: `${level.color}22` }}
+                >
+                  <level.icon size={20} style={{ color: level.color }} />
+                </div>
                 <span
                   className="text-xs font-bold px-3 py-1 rounded-full"
-                  style={{ background: level.color, color: "#fff" }}
+                  style={{ background: level.color, color: level.color === "#FFD600" ? "#0D0000" : "#fff" }}
                 >
                   {level.name}
                 </span>
@@ -139,8 +145,8 @@ export default function PuntosPage() {
               <div>
                 <div className="flex justify-between text-[11px] mb-1" style={{ color: "#555" }}>
                   <span>{level.name}</span>
-                  <span>
-                    {next.min - points} pts para {next.emoji} {next.name}
+                  <span className="flex items-center gap-1">
+                    {next.min - points} pts para <next.icon size={11} style={{ display: "inline" }} /> {next.name}
                   </span>
                 </div>
                 <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1f1f1f" }}>
@@ -156,8 +162,8 @@ export default function PuntosPage() {
             )}
 
             {!next && (
-              <p className="text-xs mt-2" style={{ color: "#F39C12" }}>
-                👑 Eres Jefe de Manada — el nivel máximo
+              <p className="flex items-center gap-1.5 text-xs mt-2" style={{ color: "#FFD600" }}>
+                <Crown size={13} /> Eres Jefe de Manada — el nivel máximo
               </p>
             )}
 
@@ -221,8 +227,8 @@ export default function PuntosPage() {
             </button>
           </div>
           {addedMsg && (
-            <p className="text-xs mt-2 font-semibold" style={{ color: "#2ecc71" }}>
-              ✓ {addedMsg}
+            <p className="flex items-center gap-1 text-xs mt-2 font-semibold" style={{ color: "#2ecc71" }}>
+              <Check size={14} /> {addedMsg}
             </p>
           )}
         </div>
@@ -249,7 +255,12 @@ export default function PuntosPage() {
                     opacity: canRedeem ? 1 : 0.5,
                   }}
                 >
-                  <span className="text-2xl">{r.emoji}</span>
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: canRedeem ? "rgba(255,214,0,0.12)" : "rgba(255,255,255,0.05)" }}
+                  >
+                    <r.icon size={20} style={{ color: canRedeem ? "#FFD600" : "#555" }} />
+                  </div>
                   <div className="flex-1">
                     <p className="font-bold text-sm text-white">{r.title}</p>
                     <p className="text-xs mt-0.5" style={{ color: "#555" }}>{r.description}</p>
@@ -279,7 +290,7 @@ export default function PuntosPage() {
           <div className="flex flex-col gap-2">
             {LEVELS.map((l) => (
               <div key={l.name} className="flex items-center gap-3">
-                <span className="text-lg w-7">{l.emoji}</span>
+                <l.icon size={18} style={{ color: l.color }} className="shrink-0" />
                 <div className="flex-1">
                   <span className="text-sm font-bold" style={{ color: l.color }}>{l.name}</span>
                 </div>
@@ -353,7 +364,9 @@ export default function PuntosPage() {
               <X size={20} />
             </button>
 
-            <div className="text-4xl mb-3">🎉</div>
+            <div className="flex justify-center mb-3">
+              <Sparkles size={36} style={{ color: "#FFD600" }} />
+            </div>
             <h3 className="font-bebas text-2xl tracking-widest mb-1">
               ¡CANJE <span style={{ color: "#F39C12" }}>EXITOSO</span>!
             </h3>

@@ -25,7 +25,7 @@ type CartContextType = {
 
 const CartContext = createContext<CartContextType | null>(null);
 
-const WHATSAPP_NUMBER = "51999999999";
+const WHATSAPP_NUMBER = "51974983862";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);

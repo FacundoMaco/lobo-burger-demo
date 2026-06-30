@@ -6,14 +6,14 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useCart } from "@/lib/cart-context";
 import { Navbar } from "@/components/navbar";
-import { UtensilsCrossed, Plus, Check, ChevronDown, Zap, Tag, Star, MessageCircle } from "lucide-react";
+import { UtensilsCrossed, Plus, Check, ChevronDown, Zap, Tag, Star, Phone, Clock, Bike, MapPin } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const YELLOW = "#FFD600";
-const RED = "#B71C1C";
-const DARK_RED = "#7B0000";
-const CARD_BG = "#9B1515";
+const RED = "#0D0000";
+const DARK_RED = "#7F1D1D";
+const CARD_BG = "#1A0000";
 
 const categories = ["Todos", "Hamburguesas", "Salchipapas", "Bebidas", "Combos"];
 
@@ -140,6 +140,7 @@ export default function HomePage() {
       scrollTrigger: {
         trigger: promosRef.current,
         start: "top 80%",
+        once: true,
       },
     });
   }, { scope: promosRef });
@@ -155,6 +156,7 @@ export default function HomePage() {
       scrollTrigger: {
         trigger: cartaRef.current,
         start: "top 75%",
+        once: true,
       },
     });
   }, { scope: cartaRef });
@@ -164,7 +166,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: RED }}>
+    <div className="min-h-screen" style={{ background: "#0D0000" }}>
       <Navbar />
 
       {/* Hero */}
@@ -172,8 +174,8 @@ export default function HomePage() {
         ref={heroRef}
         className="relative min-h-screen flex flex-col items-center justify-center px-4 text-center"
         style={{
-          background: `${RED}`,
-          backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg stroke='%23ffffff' stroke-width='0.5' stroke-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+          background: `linear-gradient(135deg, #0D0000 0%, #3B0000 60%, #0D0000 100%)`,
+          backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40L40 0' stroke='%23DC2626' stroke-width='0.8' stroke-opacity='0.12'/%3E%3C/svg%3E\")",
         }}
       >
         <div className="hero-logo">
@@ -217,24 +219,26 @@ export default function HomePage() {
       </section>
 
       {/* Promos */}
-      <section id="promos" ref={promosRef} className="px-4 py-16 max-w-4xl mx-auto">
-        <h2 className="font-bebas text-4xl md:text-5xl tracking-widest text-center mb-10">
-          PROMOS <span style={{ color: YELLOW }}>DE HOY</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {promos.map((p, i) => (
-            <div
-              key={i}
-              className="promo-card rounded-xl p-6 flex flex-col gap-3"
-              style={{ background: DARK_RED, border: `1px solid rgba(255,214,0,0.3)` }}
-            >
-              <p.icon size={24} style={{ color: YELLOW }} />
-              <div>
-                <p className="font-bebas text-xl tracking-wider text-white">{p.label}</p>
-                <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>{p.desc}</p>
+      <section id="promos" ref={promosRef} style={{ background: "#FFD600" }}>
+        <div className="px-4 py-16 max-w-4xl mx-auto">
+          <h2 className="font-bebas text-4xl md:text-5xl tracking-widest text-center mb-10" style={{ color: "#0D0000" }}>
+            PROMOS DE HOY
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {promos.map((p, i) => (
+              <div
+                key={i}
+                className="promo-card rounded-xl p-6 flex flex-col gap-3"
+                style={{ background: "#0D0000", border: `1px solid rgba(255,214,0,0.5)` }}
+              >
+                <p.icon size={24} style={{ color: YELLOW }} />
+                <div>
+                  <p className="font-bebas text-xl tracking-wider text-white">{p.label}</p>
+                  <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>{p.desc}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
@@ -285,18 +289,31 @@ export default function HomePage() {
       {/* Footer */}
       <footer
         className="px-6 py-10 text-center"
-        style={{ background: DARK_RED, borderTop: "1px solid rgba(255,214,0,0.1)" }}
+        style={{ background: "#0D0000", borderTop: "1px solid rgba(255,214,0,0.3)" }}
       >
         <h3 className="font-bebas text-3xl tracking-widest">
           <span className="text-white">LOBO </span>
           <span style={{ color: YELLOW }}>BURGER</span>
         </h3>
-        <div className="flex items-center justify-center gap-2 mt-3" style={{ color: "rgba(255,255,255,0.5)" }}>
-          <MessageCircle size={14} style={{ color: "#25D366" }} />
-          <span className="text-sm">+51 999 999 999</span>
+        <div className="flex flex-wrap items-center justify-center gap-4 mt-4" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <div className="flex items-center gap-1.5 text-sm">
+            <Clock size={14} style={{ color: YELLOW }} />
+            <span>Lun-Dom 12pm-11pm</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-sm">
+            <Bike size={14} style={{ color: YELLOW }} />
+            <span>Delivery disponible</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-sm">
+            <Phone size={14} style={{ color: YELLOW }} />
+            <span>+51 974 983 862</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-sm">
+            <MapPin size={14} style={{ color: YELLOW }} />
+            <span>Piura, Peru</span>
+          </div>
         </div>
-        <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.3)" }}>Lun-Dom 12pm-11pm &nbsp;|&nbsp; Delivery y para recoger</p>
-        <p className="text-[11px] mt-4" style={{ color: "rgba(255,255,255,0.15)" }}>© 2025 Lobo Burger. Todos los derechos reservados.</p>
+        <p className="text-[11px] mt-5" style={{ color: "rgba(255,255,255,0.15)" }}>© 2025 Lobo Burger. Todos los derechos reservados.</p>
       </footer>
 
       <style>{`
