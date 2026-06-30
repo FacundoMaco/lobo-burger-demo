@@ -92,6 +92,33 @@
   }
 }
 
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chevronBounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(8px); }
+}
+
+.hero-logo    { animation: fadeInUp 0.7s ease-out both; }
+.hero-tagline { animation: fadeInUp 0.7s ease-out 0.18s both; }
+.hero-sub     { animation: fadeInUp 0.6s ease-out 0.32s both; }
+.hero-btn-1   { animation: fadeInUp 0.5s ease-out 0.44s both; }
+.hero-btn-2   { animation: fadeInUp 0.5s ease-out 0.54s both; }
+.chevron-anim { animation: chevronBounce 1.4s ease-in-out infinite; }
+
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.55s ease-out, transform 0.55s ease-out;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @keyframes pulse-red {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
   50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
