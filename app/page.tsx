@@ -301,7 +301,8 @@ export default function HomePage() {
           <span className="flex items-center gap-1.5 text-sm"><Clock size={13} style={{ color: YELLOW }} />Lun-Dom 12pm-11pm</span>
           <span className="flex items-center gap-1.5 text-sm"><Bike size={13} style={{ color: YELLOW }} />Delivery disponible</span>
           <span className="flex items-center gap-1.5 text-sm"><Phone size={13} style={{ color: YELLOW }} />+51 974 983 862</span>
-          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: YELLOW }} />Piura, Peru</span>
+          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: YELLOW }} />Av. Aviación, Lima</span>
+          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: YELLOW }} />San Juan de Miraflores, Lima</span>
         </div>
         <p className="text-[11px] mt-5" style={{ color: "rgba(255,255,255,0.12)" }}>
           © 2025 Lobo Burger. Todos los derechos reservados.
