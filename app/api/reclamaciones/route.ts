@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { Resend } from "resend";
 
 // Campos obligatorios del Anexo I (DS 011-2011-PCM).
@@ -26,6 +26,13 @@ function folioDe(id: number, createdAt: string): string {
 }
 
 export async function POST(request: Request) {
+  let supabase;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch {
+    return Response.json({ error: "Libro de reclamaciones no configurado" }, { status: 500 });
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -56,7 +63,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Monto inválido" }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("reclamaciones")
     .insert({
       tipo: body.tipo,
