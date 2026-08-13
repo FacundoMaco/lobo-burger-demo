@@ -42,40 +42,55 @@
 }
 
 :root {
-  --background: #0D0000;
-  --foreground: #FFFFFF;
-  --card: #1A0000;
-  --card-foreground: #FFFFFF;
-  --popover: #1A0000;
-  --popover-foreground: #FFFFFF;
-  --primary: #FFD600;
-  --primary-foreground: #A16207;
-  --secondary: #7F1D1D;
-  --secondary-foreground: #FFFFFF;
-  --muted: #7F1D1D;
-  --muted-foreground: rgba(255,255,255,0.5);
-  --accent: #FFD600;
-  --accent-foreground: #A16207;
+  /* Sistema de diseño Fase 1 — tokens de la spec */
+  --color-bg: #FFFDF8;            /* blanco hueso, fondo dominante */
+  --color-primary: #F5A623;       /* amarillo oro — CTAs, precios, queso derretido */
+  --color-accent: #E63950;        /* rojo sandía — badges, promos, hover */
+  --color-ink: #241F1C;           /* texto y líneas — nunca como fondo grande */
+  --color-primary-soft: #FFEFC7;  /* secciones alternas */
+  --color-accent-soft: #FADADD;   /* fondos de tarjeta/hover sutil */
+
+  --background: #FFFDF8;
+  --foreground: #241F1C;
+  --card: #FFFFFF;
+  --card-foreground: #241F1C;
+  --popover: #FFFFFF;
+  --popover-foreground: #241F1C;
+  --primary: #F5A623;
+  --primary-foreground: #241F1C;
+  --secondary: #FFEFC7;
+  --secondary-foreground: #241F1C;
+  --muted: #FFEFC7;
+  --muted-foreground: rgba(36, 31, 28, 0.6);
+  --accent: #E63950;
+  --accent-foreground: #FFFFFF;
   --destructive: #DC2626;
-  --border: rgba(255, 214, 0, 0.2);
-  --input: #7F1D1D;
-  --ring: #FFD600;
+  --border: rgba(36, 31, 28, 0.15);
+  --input: #FFFFFF;
+  --ring: #E63950;
   --radius: 0.5rem;
-  --sidebar: #7F1D1D;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #FFD600;
-  --sidebar-primary-foreground: #A16207;
-  --sidebar-accent: #1A0000;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: rgba(255, 214, 0, 0.2);
-  --sidebar-ring: #FFD600;
-  --lobo-bg: #0D0000;
-  --lobo-red: #DC2626;
-  --lobo-red-dark: #7F1D1D;
-  --lobo-yellow: #FFD600;
-  --lobo-yellow-dark: #A16207;
+  --sidebar: #FFFDF8;
+  --sidebar-foreground: #241F1C;
+  --sidebar-primary: #F5A623;
+  --sidebar-primary-foreground: #241F1C;
+  --sidebar-accent: #FFEFC7;
+  --sidebar-accent-foreground: #241F1C;
+  --sidebar-border: rgba(36, 31, 28, 0.15);
+  --sidebar-ring: #E63950;
+
+  --lobo-bg: #FFFDF8;
+  --lobo-red: #E63950;
+  --lobo-red-dark: #A8203A;
+  --lobo-yellow: #F5A623;
+  --lobo-yellow-dark: #B37409;
   --lobo-white: #FFFFFF;
-  --lobo-muted: rgba(255, 255, 255, 0.5);
+  --lobo-muted: rgba(36, 31, 28, 0.6);
+  --lobo-watermelon: #E63950;
+  --lobo-watermelon-bright: #FF4D68;
+  --lobo-watermelon-dark: #A8203A;
+  --lobo-paper: #FFFDF8;
+  --lobo-paper-ink: #241F1C;
+  --lobo-paper-muted: rgba(36, 31, 28, 0.6);
 }
 
 @layer base {
@@ -83,12 +98,12 @@
     @apply border-border outline-ring/50;
   }
   body {
-    background-color: #0D0000;
-    color: #FFFFFF;
+    background-color: #FFFDF8;
+    color: #241F1C;
     font-family: var(--font-body);
   }
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 }
 
@@ -137,9 +152,63 @@
   animation: pulse-yellow 2s infinite;
 }
 
+@keyframes cartBarIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cart-bar {
+  animation: cartBarIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-bar { animation: none; }
+}
+
+.reel-frame {
+  opacity: 0;
+  transform: scale(1.06);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reel-frame.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@keyframes kenBurns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.09); }
+}
+.video-kenburns {
+  animation: kenBurns 16s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reel-frame { opacity: 1; transform: none; transition: none; }
+  .video-kenburns { animation: none; }
+}
+
+.paper-texture {
+  background-color: #0D0000;
+  background-image:
+    linear-gradient(rgba(13, 0, 0, 0.62), rgba(13, 0, 0, 0.62)),
+    url("/textures/wrapper-paper-dark.webp");
+  background-repeat: repeat;
+  background-size: auto, 320px auto;
+}
+
+.paper-texture-light {
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(rgba(255, 253, 248, 0.8), rgba(255, 253, 248, 0.8)),
+    url("/textures/wrapper-paper-light.webp");
+  background-repeat: repeat;
+  background-size: auto, 320px auto;
+}
+
 .font-bebas {
   font-family: var(--font-bebas), 'Impact', 'Arial Black', sans-serif;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
 }
 
 .card-lobo {

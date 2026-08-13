@@ -191,7 +191,7 @@ export default function PuntosPage() {
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "rgba(255,214,0,0.1)" }}>
               <Gift size={24} style={{ color: "#FFD600" }} />
             </div>
-            <h2 className="font-bebas text-3xl tracking-widest mb-1">OBTÉN 15% DE DESCUENTO</h2>
+            <h1 className="font-bebas text-3xl tracking-widest mb-1">OBTÉN 15% DE DESCUENTO</h1>
             <p className="text-sm mb-6" style={{ color: "#888" }}>en tu próximo pedido</p>
 
             {showCode ? (
@@ -237,7 +237,7 @@ export default function PuntosPage() {
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ background: "rgba(255,214,0,0.1)" }}>
               <Phone size={24} style={{ color: "#FFD600" }} />
             </div>
-            <h2 className="font-bebas text-3xl tracking-widest mb-1">OBTÉN OTRO 15%</h2>
+            <h1 className="font-bebas text-3xl tracking-widest mb-1">OBTÉN OTRO 15%</h1>
             <p className="text-sm mb-6" style={{ color: "#888" }}>Agrega tu celular</p>
 
             {showCode ? (
@@ -280,7 +280,7 @@ export default function PuntosPage() {
           <div className="rounded-2xl p-7" style={{ background: "#150000", border: "1px solid rgba(255,214,0,0.15)" }}>
             <div className="flex items-center gap-2 mb-5">
               <Crown size={20} style={{ color: "#FFD600" }} />
-              <h2 className="font-bebas text-2xl tracking-widest" style={{ color: "#FFD600" }}>ÚNETE A LA MANADA</h2>
+              <h1 className="font-bebas text-2xl tracking-widest" style={{ color: "#FFD600" }}>ÚNETE A LA MANADA</h1>
             </div>
             <p className="text-sm mb-5" style={{ color: "#888" }}>
               Acumula Wolfpoints en cada pedido. Canjea hamburguesas, salchipapas y más.
@@ -296,19 +296,19 @@ export default function PuntosPage() {
               <input
                 type="text" value={name} onChange={(e) => setName(e.target.value)}
                 placeholder="Tu nombre"
-                className="w-full rounded-xl py-3 px-4 text-sm text-white outline-none"
+                className="w-full rounded-xl py-3 px-4 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-offset-0"
                 style={INPUT_STYLE}
               />
               <input
                 type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu@correo.com"
-                className="w-full rounded-xl py-3 px-4 text-sm text-white outline-none"
+                className="w-full rounded-xl py-3 px-4 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-offset-0"
                 style={INPUT_STYLE}
               />
               <input
                 type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
                 placeholder="9XXXXXXXX"
-                className="w-full rounded-xl py-3 px-4 text-sm text-white outline-none"
+                className="w-full rounded-xl py-3 px-4 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-offset-0"
                 style={INPUT_STYLE}
               />
             </div>
@@ -336,7 +336,7 @@ export default function PuntosPage() {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <p className="text-xs font-semibold tracking-widest uppercase mb-0.5" style={{ color: "#555" }}>Hola,</p>
-                <p className="font-bebas text-2xl tracking-widest">{member.name}</p>
+                <h1 className="font-bebas text-2xl tracking-widest">{member.name}</h1>
               </div>
               <div
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
@@ -386,9 +386,9 @@ export default function PuntosPage() {
 
             {/* Recompensas */}
             <div className="mb-5">
-              <h3 className="font-bebas text-2xl tracking-widest mb-3">
+              <h2 className="font-bebas text-2xl tracking-widest mb-3">
                 CANJES <span style={{ color: "#DC2626" }}>DISPONIBLES</span>
-              </h3>
+              </h2>
               <div className="flex flex-col gap-3">
                 {REWARDS.map((r) => {
                   const can = pts >= r.pts;
@@ -426,7 +426,7 @@ export default function PuntosPage() {
 
             {/* Historial */}
             <div className="rounded-xl p-4" style={{ background: "#150000", border: "1px solid #1f0000" }}>
-              <h3 className="font-bebas text-xl tracking-widest mb-3">HISTORIAL</h3>
+              <h2 className="font-bebas text-xl tracking-widest mb-3">HISTORIAL</h2>
               {member.history.length === 0 ? (
                 <p className="text-xs" style={{ color: "#444" }}>
                   Tus puntos aparecen después de que el cajero valide tu pedido.
@@ -454,6 +454,7 @@ export default function PuntosPage() {
         {stage === "dashboard" && !member && (
           <div className="text-center py-12">
             <Crown size={40} className="mx-auto mb-4" style={{ color: "#444" }} />
+            <h1 className="sr-only">La Manada — Programa de fidelidad Lobo Burger</h1>
             <p className="text-sm mb-1" style={{ color: "#888" }}>No estás registrado en La Manada aún</p>
             <button
               onClick={() => setStage("join")}
@@ -494,7 +495,7 @@ export default function PuntosPage() {
       {redeemResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.9)" }}>
           <div className="w-full max-w-sm rounded-2xl p-6 text-center relative" style={{ background: "#150000", border: "1px solid rgba(255,214,0,0.4)" }}>
-            <button onClick={() => setRedeemResult(null)} className="absolute top-4 right-4 p-1" style={{ color: "#555" }}>
+            <button onClick={() => setRedeemResult(null)} aria-label="Cerrar" className="absolute top-4 right-4 p-1" style={{ color: "#555" }}>
               <X size={20} />
             </button>
             <Sparkles size={36} className="mx-auto mb-3" style={{ color: "#FFD600" }} />

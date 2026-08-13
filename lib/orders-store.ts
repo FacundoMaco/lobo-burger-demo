@@ -5,6 +5,8 @@ export type Order = {
   createdAt: string;
   name: string;
   phone: string;
+  email?: string;
+  culqiChargeId?: string;
   delivery: boolean;
   address: string;
   items: { id: number; name: string; price: number; qty: number }[];

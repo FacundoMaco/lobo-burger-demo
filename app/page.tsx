@@ -1,45 +1,60 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useCart } from "@/lib/cart-context";
 import { Navbar } from "@/components/navbar";
-import { UtensilsCrossed, Plus, Check, ChevronDown, Zap, Tag, Star, Phone, Clock, Bike, MapPin } from "lucide-react";
+import { LocalReel } from "@/components/local-reel";
+import { LocationBar } from "@/components/location-bar";
+import { PromoSlider, type HeroPromo } from "@/components/promo-slider";
+import { CheeseDrip } from "@/components/cheese-drip";
+import { Plus, Minus, Check, Phone, Clock, Bike, MapPin, BookText } from "lucide-react";
 
-const YELLOW = "#FFD600";
-const DARK_RED = "#7F1D1D";
+const BG = "#FFFDF8";
+const PRIMARY = "#F5A623";
+const PRIMARY_SOFT = "#FFEFC7";
+const ACCENT = "#E63950";
+const ACCENT_SOFT = "#FADADD";
+const INK = "#241F1C";
 
-const categories = ["Todos", "Hamburguesas", "Salchipapas", "Bebidas", "Combos"];
+const categories = ["Combos", "Burgers", "Pollo", "Complementos", "Bebidas"];
 
+// Precios por confirmar con la carta oficial de Jaime.
 const menuItems = [
-  { id: 1,  category: "Hamburguesas", name: "Lobo Clasica",      description: "Carne 180g, lechuga, tomate, cebolla caramelizada y salsa lobo secreta.",         price: 18, badge: null as string | null, originalPrice: null as number | null, tags: ["180g", "Carne res", "Clasica"] },
-  { id: 2,  category: "Hamburguesas", name: "Doble Lobo",        description: "Doble carne 180g c/u, doble queso cheddar, pepinillos y mostaza artesanal.",      price: 24, badge: "POPULAR",      originalPrice: null,  tags: ["2x180g", "Doble queso", "Popular"] },
-  { id: 3,  category: "Hamburguesas", name: "BBQ Wolf",          description: "Carne 180g, salsa BBQ ahumada, cebolla crispy, queso suizo y jalapeños.",          price: 22, badge: null,           originalPrice: null,  tags: ["180g", "BBQ ahumado", "Jalapeños"] },
-  { id: 4,  category: "Hamburguesas", name: "Crispy Wolf",       description: "Pollo apanado crocante, salsa honey mustard, repollo morado y tomate.",            price: 20, badge: null,           originalPrice: null,  tags: ["Pollo", "Honey mustard", "Crocante"] },
-  { id: 5,  category: "Hamburguesas", name: "La Bestia",         description: "Doble carne 200g, bacon crujiente, huevo frito, doble queso y salsa especial.",    price: 28, badge: "BESTSELLER",  originalPrice: null,  tags: ["2x200g", "Bacon", "Huevo frito", "XL"] },
-  { id: 6,  category: "Salchipapas", name: "Salchipapa Clasica", description: "Papas fritas golden, salchicha premium, ketchup y mayonesa.",                      price: 10, badge: null,           originalPrice: null,  tags: ["Papas golden", "Salchicha", "2 salsas"] },
-  { id: 7,  category: "Salchipapas", name: "Salchipapa Lobo",   description: "Papas fritas, chorizo artesanal, queso derretido y salsa lobo.",                   price: 14, badge: "ESPECIAL",    originalPrice: null,  tags: ["Chorizo", "Queso fundido", "Especial"] },
-  { id: 8,  category: "Salchipapas", name: "Salchipapa XL",     description: "Porcion XL de papas, salchicha doble, tres salsas a eleccion y toppings.",         price: 16, badge: null,           originalPrice: null,  tags: ["Porcion XL", "Salchicha doble", "3 salsas"] },
-  { id: 9,  category: "Salchipapas", name: "Salchipapa Mixta",  description: "Papas, chorizo + salchicha, queso fundido, bacon bits y cebolla verde.",           price: 18, badge: "NUEVO",        originalPrice: null,  tags: ["Chorizo + salchicha", "Queso", "Bacon"] },
-  { id: 10, category: "Bebidas",     name: "Gaseosa",            description: "Coca-Cola, Sprite, Fanta — fria y bien servida.",                                  price: 5,  badge: null,           originalPrice: null,  tags: ["330ml", "Fria"] },
-  { id: 11, category: "Bebidas",     name: "Limonada",           description: "Limonada natural frozen con menta y azucar de cana.",                              price: 7,  badge: null,           originalPrice: null,  tags: ["Natural", "Frozen", "Menta"] },
-  { id: 12, category: "Bebidas",     name: "Jugo Natural",       description: "Maracuya, mango o naranja. Siempre del dia.",                                      price: 8,  badge: null,           originalPrice: null,  tags: ["Del dia", "Sin azucar"] },
-  { id: 13, category: "Combos",      name: "Combo Lobo",         description: "Hamburguesa Lobo Clasica + Salchipapa Clasica + Gaseosa.",                         price: 25, badge: "AHORRA S/8",  originalPrice: 33,    tags: ["Hamburguesa", "Salchipapa", "Gaseosa", "Ahorra S/8"] },
-  { id: 14, category: "Combos",      name: "Combo Bestia",       description: "La Bestia + Salchipapa XL + Jugo Natural. Para los que no se guardan nada.",       price: 38, badge: "AHORRA S/13", originalPrice: 51,    tags: ["La Bestia", "Salchipapa XL", "Jugo", "Ahorra S/13"] },
+  { id: 13, category: "Combos",       name: "Combo Lobo",            description: "Burger de la casa + Salchipapa Clasica + Gaseosa.",                              price: 25, badge: "AHORRA S/8" as string | null,  originalPrice: 33 as number | null, image: "/images/menu/a.webp" as string | null },
+  { id: 14, category: "Combos",       name: "Combo Bestia",          description: "Burgazo + Salchipapa XL + Jugo Natural. Para los que no se guardan nada.",       price: 38, badge: "AHORRA S/13", originalPrice: 51,   image: "/images/menu/b.webp" },
+  { id: 1,  category: "Burgers",      name: "Miami Night",           description: "Carne smash, queso derretido, papas al hilo y salsas de la casa.",               price: 18, badge: null,          originalPrice: null, image: "/images/menu/miami-night.webp" },
+  { id: 2,  category: "Burgers",      name: "Doble Carne",           description: "Doble carne smash, doble queso cheddar y salsa lobo.",                           price: 24, badge: "POPULAR",     originalPrice: null, image: "/images/menu/doublecarne.webp" },
+  { id: 3,  category: "Burgers",      name: "Bacon Cheese",          description: "Carne smash, bacon crocante, queso cheddar fundido y salsa lobo.",               price: 22, badge: null,          originalPrice: null, image: "/images/menu/baconcheese.webp" },
+  { id: 5,  category: "Burgers",      name: "Burgazo",               description: "La mas pedida: doble carne, queso, papas al hilo y salsas de la casa.",          price: 28, badge: "BESTSELLER",  originalPrice: null, image: "/images/menu/burgazo.webp" },
+  { id: 16, category: "Burgers",      name: "Tropical Burger",       description: "Carne smash con pina dorada, queso y salsa especial.",                           price: 23, badge: null,          originalPrice: null, image: "/images/menu/tropical-burger.webp" },
+  { id: 17, category: "Burgers",      name: "Chori Royal",           description: "Chorizo artesanal, queso derretido y salsas de la casa.",                        price: 20, badge: null,          originalPrice: null, image: "/images/menu/choriroyal.webp" },
+  { id: 4,  category: "Pollo",        name: "Burger de Pollo",       description: "Filete de pollo crocante, lechuga fresca y mayonesa de la casa.",                price: 20, badge: null,          originalPrice: null, image: "/images/menu/burgerpollodesi.webp" },
+  { id: 15, category: "Pollo",        name: "Filete de Pollo Royal", description: "Filete de pollo a la plancha, queso derretido y salsa de la casa.",              price: 21, badge: "NUEVO",       originalPrice: null, image: "/images/menu/filete-de-pollo-royal.webp" },
+  { id: 6,  category: "Complementos", name: "Salchipapa Clasica",    description: "Papas fritas golden, salchicha premium, ketchup y mayonesa.",                    price: 10, badge: null,          originalPrice: null, image: null },
+  { id: 7,  category: "Complementos", name: "Salchipapa Lobo",       description: "Papas fritas, chorizo artesanal, queso derretido y salsa lobo.",                 price: 14, badge: "ESPECIAL",    originalPrice: null, image: null },
+  { id: 8,  category: "Complementos", name: "Salchipapa XL",         description: "Porcion XL de papas, salchicha doble, tres salsas a eleccion y toppings.",       price: 16, badge: null,          originalPrice: null, image: null },
+  { id: 9,  category: "Complementos", name: "Salchipobre",           description: "Papas fritas, salchicha, huevo frito y salsas — el clasico a lo pobre.",         price: 18, badge: null,          originalPrice: null, image: "/images/menu/salchipobre.webp" },
+  { id: 10, category: "Bebidas",      name: "Gaseosa",               description: "Coca-Cola, Sprite, Fanta — fria y bien servida.",                                price: 5,  badge: null,          originalPrice: null, image: null },
+  { id: 11, category: "Bebidas",      name: "Limonada",              description: "Limonada natural frozen con menta y azucar de cana.",                            price: 7,  badge: null,          originalPrice: null, image: null },
+  { id: 12, category: "Bebidas",      name: "Jugo Natural",          description: "Maracuya, mango o naranja. Siempre del dia.",                                    price: 8,  badge: null,          originalPrice: null, image: null },
 ];
 
-const promos = [
-  { label: "Martes 2x1 Salchipapas", desc: "Valido de 12pm a 8pm los martes.", icon: Zap },
-  { label: "Combo Lobo S/25",         desc: "Precio normal S/33. Ahorras S/8.", icon: Tag },
-  { label: "Primera visita -20%",     desc: "Muestrale esta pantalla al cajero.", icon: Star },
+const heroPromos: HeroPromo[] = [
+  { id: 13, name: "Combo Lobo",            price: 25, tag: "AHORRA S/8",  placeholder: "Foto: Combo Lobo",      image: "/images/menu/a.webp" },
+  { id: 14, name: "Combo Bestia",          price: 38, tag: "AHORRA S/13", placeholder: "Foto: Combo Bestia",    image: "/images/menu/b.webp" },
+  { id: 2,  name: "Doble Carne",           price: 24, tag: "POPULAR",     placeholder: "Foto: Doble Carne",     image: "/images/menu/doublecarne.webp" },
+  { id: 6,  name: "Martes 2x1 Salchipapa", price: 10, tag: "SOLO MARTES", placeholder: "Foto: Salchipapa 2x1",  image: "/images/menu/salchipobre.webp" },
 ];
 
-function gradientByCategory(category: string): string {
+function placeholderColor(category: string): string {
   switch (category) {
-    case "Hamburguesas": return "linear-gradient(135deg, #3B0000, #7F1D1D)";
-    case "Salchipapas":  return "linear-gradient(135deg, #1A1A00, #3D3000)";
-    case "Bebidas":      return "linear-gradient(135deg, #001A1A, #003D3D)";
-    case "Combos":       return "linear-gradient(135deg, #1A0000, #3B0000)";
-    default:             return "linear-gradient(135deg, #1A0000, #3B0000)";
+    case "Combos":       return ACCENT_SOFT;
+    case "Burgers":      return PRIMARY_SOFT;
+    case "Pollo":        return "#FFE8D1";
+    case "Complementos": return "#FFF3C4";
+    case "Bebidas":      return "#DDF0EE";
+    default:             return PRIMARY_SOFT;
   }
 }
 
@@ -60,89 +75,104 @@ function useReveal(rootMargin = "0px 0px -60px 0px") {
 
 function ItemBadge({ text }: { text: string }) {
   const isPromo = text.startsWith("AHORRA");
-  const bg = text === "BESTSELLER" ? "#DC2626" : isPromo ? YELLOW : text === "POPULAR" ? "#1a5276" : text === "NUEVO" ? "#1e8449" : "#555";
-  const color = isPromo ? DARK_RED : "#fff";
+  const bg = text === "BESTSELLER" || isPromo ? ACCENT : text === "POPULAR" ? INK : text === "NUEVO" ? "#1E9E4A" : "#6B6560";
   return (
-    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: bg, color }}>
+    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{ background: bg, color: "#FFFFFF" }}>
       {text}
     </span>
   );
 }
 
 function MenuCard({ item }: { item: typeof menuItems[0] }) {
-  const { add, items } = useCart();
+  const { add, update, items } = useCart();
   const [added, setAdded] = useState(false);
   const inCart = items.find(i => i.id === item.id);
 
   const handleAdd = () => {
     add({ id: item.id, name: item.name, price: item.price });
     setAdded(true);
-    setTimeout(() => setAdded(false), 1200);
+    setTimeout(() => setAdded(false), 900);
   };
-
-  const isCombo = item.category === "Combos";
 
   return (
     <div
-      className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-1 cursor-pointer"
+      className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-1"
       style={{
-        background: "#150000",
-        border: `1px solid ${inCart ? "rgba(255,214,0,0.4)" : isCombo ? "rgba(255,214,0,0.2)" : "rgba(255,214,0,0.08)"}`,
-        boxShadow: inCart ? "0 4px 24px rgba(255,214,0,0.08)" : "0 4px 24px rgba(0,0,0,0.4)",
+        background: "#FFFFFF",
+        border: `1px solid ${inCart ? "rgba(230,57,80,0.4)" : "rgba(36,31,28,0.1)"}`,
+        boxShadow: inCart ? "0 4px 20px rgba(230,57,80,0.12)" : "0 4px 16px rgba(36,31,28,0.07)",
       }}
     >
-      {/* Imagen placeholder — aspect ratio 4:3 */}
-      <div className="relative w-full" style={{ paddingTop: "75%" }}>
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ background: gradientByCategory(item.category) }}
-        >
-          <UtensilsCrossed size={40} style={{ color: YELLOW, opacity: 0.3 }} />
-          {item.badge && (
-            <span className="absolute top-3 right-3">
-              <ItemBadge text={item.badge} />
-            </span>
-          )}
-        </div>
+      <div className="relative w-full" style={{ paddingTop: "62%", background: placeholderColor(item.category) }}>
+        {item.image ? (
+          <Image
+            src={item.image}
+            alt={item.name}
+            fill
+            sizes="(max-width: 768px) 50vw, 33vw"
+            className="object-cover"
+          />
+        ) : (
+          <span
+            className="absolute inset-0 flex items-center justify-center font-mono text-[11px] px-3 text-center"
+            style={{ color: "rgba(36,31,28,0.45)" }}
+          >
+            [Foto: {item.name}]
+          </span>
+        )}
+        {item.badge && (
+          <span className="absolute top-3 right-3">
+            <ItemBadge text={item.badge} />
+          </span>
+        )}
       </div>
 
       {/* Info */}
-      <div className="p-4 flex flex-col gap-2 flex-1">
-        <h3 className="font-bebas text-xl tracking-wider text-white leading-tight">{item.name}</h3>
-        <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>{item.description}</p>
+      <div className="p-4 flex flex-col gap-1.5 flex-1">
+        <h3 className="font-bebas text-base leading-tight" style={{ color: INK }}>{item.name}</h3>
+        <p className="text-xs leading-relaxed" style={{ color: "rgba(36,31,28,0.6)" }}>{item.description}</p>
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1.5 mt-1">
-          {item.tags.map(tag => (
-            <span
-              key={tag}
-              className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(255,214,0,0.08)", color: "rgba(255,214,0,0.7)", border: "1px solid rgba(255,214,0,0.15)" }}
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        {/* Footer: precio + botón */}
         <div
           className="flex items-center justify-between mt-auto pt-3"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ borderTop: "1px solid rgba(36,31,28,0.07)" }}
         >
           <div>
-            <span className="font-bebas text-2xl leading-none" style={{ color: YELLOW }}>S/{item.price}</span>
+            <span className="font-mono text-lg font-bold leading-none" style={{ color: INK }}>S/{item.price}</span>
             {item.originalPrice && (
-              <span className="text-xs line-through ml-2" style={{ color: "rgba(255,255,255,0.2)" }}>S/{item.originalPrice}</span>
+              <span className="font-mono text-xs line-through ml-2" style={{ color: "rgba(36,31,28,0.35)" }}>S/{item.originalPrice}</span>
             )}
           </div>
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-150 active:scale-95 cursor-pointer"
-            style={{ background: added ? "#25D366" : YELLOW, color: DARK_RED }}
-          >
-            {added ? <Check size={13} /> : <Plus size={13} />}
-            {added ? "Agregado" : inCart ? `Agregar (${inCart.qty})` : "Agregar"}
-          </button>
+
+          {inCart ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => update(item.id, inCart.qty - 1)}
+                aria-label={`Restar ${item.name}`}
+                className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer active:scale-90 transition-transform"
+                style={{ background: "rgba(36,31,28,0.08)" }}
+              >
+                <Minus size={13} style={{ color: INK }} />
+              </button>
+              <span className="font-mono text-sm font-bold w-5 text-center" style={{ color: INK }}>{inCart.qty}</span>
+              <button
+                onClick={handleAdd}
+                aria-label={`Sumar ${item.name}`}
+                className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer active:scale-90 transition-transform"
+                style={{ background: PRIMARY }}
+              >
+                <Plus size={13} style={{ color: INK }} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAdd}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-150 active:scale-95 cursor-pointer"
+              style={{ background: added ? "#1E9E4A" : PRIMARY, color: added ? "#FFFFFF" : INK }}
+            >
+              {added ? <Check size={13} /> : <Plus size={13} />}
+              {added ? "Agregado" : "Agregar"}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -150,162 +180,95 @@ function MenuCard({ item }: { item: typeof menuItems[0] }) {
 }
 
 export default function HomePage() {
-  const [active, setActive] = useState("Todos");
-  const promosReveal = useReveal();
-  const cartaReveal  = useReveal();
+  const [active, setActive] = useState("Combos");
+  const cartaReveal = useReveal();
 
-  const filtered = menuItems.filter(i => active === "Todos" || i.category === active);
-  const grouped: Record<string, typeof menuItems> = {};
-  if (active === "Todos") {
-    for (const item of filtered) {
-      if (!grouped[item.category]) grouped[item.category] = [];
-      grouped[item.category].push(item);
-    }
-  }
-
-  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const filtered = menuItems.filter(i => i.category === active);
 
   return (
-    <div className="min-h-screen" style={{ background: "#0D0000" }}>
+    <div className="min-h-screen" style={{ background: BG }}>
       <Navbar />
+      <LocationBar />
 
-      {/* Hero */}
-      <section
-        className="relative min-h-screen flex flex-col items-center justify-center px-4 text-center overflow-hidden"
-        style={{ background: "linear-gradient(160deg, #0D0000 0%, #2D0000 50%, #0D0000 100%)" }}
-      >
-        {/* Barra decorativa amarilla izquierda */}
-        <div
-          className="absolute left-0 top-0 bottom-0"
-          style={{ width: "4px", background: YELLOW, opacity: 0.6 }}
-        />
-
-        <div className="hero-logo">
-          <h1 className="font-bebas tracking-widest leading-none" style={{ fontSize: "clamp(72px,18vw,140px)" }}>
-            <span className="text-white">LOBO </span>
-            <span style={{ color: YELLOW }}>BURGER</span>
+      {/* Hero — carrusel de promociones (bloque primary) */}
+      <section id="promos" style={{ background: PRIMARY }}>
+        <div className="px-4 pt-10 pb-6 max-w-md mx-auto text-center">
+          <h1 className="hero-logo font-bebas leading-none" style={{ fontSize: "clamp(34px,8vw,56px)", color: INK }}>
+            LOBO <span style={{ color: "#FFFFFF" }}>BURGER</span>
           </h1>
-        </div>
-
-        <p className="hero-tagline font-bebas text-2xl md:text-3xl tracking-[0.3em] mt-2" style={{ color: "rgba(255,255,255,0.65)" }}>
-          Salvaje de Sabor
-        </p>
-
-        <p className="hero-sub text-sm mt-3 max-w-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>
-          Hamburguesas y salchipapas. Lun-Dom 12pm-11pm. Delivery disponible.
-        </p>
-
-        <div className="flex gap-3 mt-8">
-          <button
-            onClick={() => scrollTo("carta")}
-            className="hero-btn-1 px-7 py-3.5 rounded-xl font-bold text-sm uppercase tracking-widest transition-all duration-150 hover:brightness-110 active:scale-95 cursor-pointer"
-            style={{ background: YELLOW, color: DARK_RED }}
-          >
-            Ver carta
-          </button>
-          <button
-            onClick={() => scrollTo("promos")}
-            className="hero-btn-2 px-7 py-3.5 rounded-xl font-bold text-sm uppercase tracking-widest transition-all duration-150 hover:bg-white/10 active:scale-95 cursor-pointer"
-            style={{ border: "2px solid rgba(255,255,255,0.4)", color: "#fff" }}
-          >
-            Promos de hoy
-          </button>
-        </div>
-
-        <div className="absolute bottom-8 chevron-anim">
-          <ChevronDown size={26} style={{ color: "rgba(255,255,255,0.3)" }} />
+          <p className="hero-tagline text-sm font-semibold uppercase tracking-[0.25em] mt-2 mb-8" style={{ color: "rgba(36,31,28,0.65)" }}>
+            Salvaje de Sabor
+          </p>
+          <PromoSlider promos={heroPromos} />
         </div>
       </section>
 
-      {/* Promos */}
-      <section id="promos" style={{ background: "#FFD600" }}>
-        <div className="px-4 py-16 max-w-4xl mx-auto">
-          <h2 className="font-bebas text-4xl md:text-5xl tracking-widest text-center mb-10" style={{ color: "#0D0000" }}>
-            PROMOS DE HOY
+      {/* Goteo de queso — firma de marca, uso único */}
+      <div style={{ background: BG }}>
+        <CheeseDrip fill={PRIMARY} />
+      </div>
+
+      {/* Carta */}
+      <section id="carta" className="px-4 md:px-8 pb-28 md:pb-16 pt-10">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="font-bebas text-2xl md:text-4xl text-center mb-8" style={{ color: INK }}>
+            NUESTRA <span style={{ color: ACCENT }}>CARTA</span>
           </h2>
-          <div ref={promosReveal} className="reveal grid grid-cols-1 md:grid-cols-3 gap-4">
-            {promos.map((p, i) => (
-              <div
-                key={i}
-                className="rounded-xl p-6 flex flex-col gap-3 transition-all duration-200 hover:-translate-y-1 relative overflow-hidden"
-                style={{ background: "#0D0000", border: "1px solid rgba(255,214,0,0.4)" }}
+
+          {/* Chips de categoría */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-8 no-scrollbar sm:justify-center">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActive(cat)}
+                className="shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer"
+                style={{
+                  background: active === cat ? ACCENT : "#FFFFFF",
+                  color: active === cat ? "#FFFFFF" : INK,
+                  border: `1.5px solid ${active === cat ? ACCENT : "rgba(36,31,28,0.2)"}`,
+                }}
               >
-                <span className="absolute top-2 right-3 font-bebas text-6xl select-none pointer-events-none" style={{ opacity: 0.08, color: "#fff", lineHeight: 1 }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <p.icon size={22} style={{ color: YELLOW }} />
-                <div>
-                  <p className="font-bebas text-xl tracking-wider text-white">{p.label}</p>
-                  <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>{p.desc}</p>
-                </div>
-              </div>
+                {cat}
+              </button>
             ))}
+          </div>
+
+          {/* Grid de productos */}
+          <div ref={cartaReveal} className="reveal grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+            {filtered.map(item => <MenuCard key={item.id} item={item} />)}
           </div>
         </div>
       </section>
 
-      {/* Carta */}
-      <section id="carta" className="px-4 md:px-8 pb-28 md:pb-16 pt-14 max-w-5xl mx-auto">
-        <h2 className="font-bebas text-4xl md:text-5xl tracking-widest text-center mb-8">
-          NUESTRA <span style={{ color: YELLOW }}>CARTA</span>
-        </h2>
-
-        {/* Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-8 no-scrollbar">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActive(cat)}
-              className="shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer"
-              style={{
-                background: active === cat ? YELLOW : "transparent",
-                color: active === cat ? DARK_RED : "rgba(255,255,255,0.45)",
-                border: `1px solid ${active === cat ? YELLOW : "rgba(255,255,255,0.12)"}`,
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        <div ref={cartaReveal} className="reveal">
-          {active === "Todos" ? (
-            Object.entries(grouped).map(([cat, items]) => (
-              <div key={cat} className="mb-10">
-                <h3
-                  className="font-bebas text-2xl tracking-widest mb-5 pb-2"
-                  style={{ color: YELLOW, borderBottom: "1px solid rgba(255,214,0,0.15)" }}
-                >
-                  {cat}
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {items.map(item => <MenuCard key={item.id} item={item} />)}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filtered.map(item => <MenuCard key={item.id} item={item} />)}
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Local */}
+      <LocalReel />
 
       {/* Footer */}
-      <footer className="px-6 py-10 text-center" style={{ background: "#0D0000", borderTop: "1px solid rgba(255,214,0,0.2)" }}>
-        <h3 className="font-bebas text-3xl tracking-widest">
-          <span className="text-white">LOBO </span>
-          <span style={{ color: YELLOW }}>BURGER</span>
-        </h3>
-        <div className="flex flex-wrap items-center justify-center gap-4 mt-4" style={{ color: "rgba(255,255,255,0.45)" }}>
-          <span className="flex items-center gap-1.5 text-sm"><Clock size={13} style={{ color: YELLOW }} />Lun-Dom 12pm-11pm</span>
-          <span className="flex items-center gap-1.5 text-sm"><Bike size={13} style={{ color: YELLOW }} />Delivery disponible</span>
-          <span className="flex items-center gap-1.5 text-sm"><Phone size={13} style={{ color: YELLOW }} />+51 974 983 862</span>
-          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: YELLOW }} />Av. Aviación, Lima</span>
-          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: YELLOW }} />San Juan de Miraflores, Lima</span>
+      <footer className="px-6 py-10 text-center" style={{ background: PRIMARY_SOFT }}>
+        <p className="font-bebas text-2xl">
+          <span style={{ color: INK }}>LOBO </span>
+          <span style={{ color: ACCENT }}>BURGER</span>
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-4 mt-4" style={{ color: "rgba(36,31,28,0.65)" }}>
+          <span className="flex items-center gap-1.5 text-sm"><Clock size={13} style={{ color: ACCENT }} />Lun-Dom 12pm-11pm</span>
+          <span className="flex items-center gap-1.5 text-sm"><Bike size={13} style={{ color: ACCENT }} />Delivery hasta ~7.5 km por sede</span>
+          <span className="flex items-center gap-1.5 text-sm"><Phone size={13} style={{ color: ACCENT }} />+51 974 983 862</span>
+          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: ACCENT }} />Av. Aviación 3877, La Calera - Surquillo</span>
+          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: ACCENT }} />Av. Vargas Machuca 526, CT - SJM</span>
         </div>
-        <p className="text-[11px] mt-5" style={{ color: "rgba(255,255,255,0.12)" }}>
-          © 2025 Lobo Burger. Todos los derechos reservados.
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+          <a
+            href="/libro-reclamaciones"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold"
+            style={{ background: "#FFFFFF", border: `1.5px solid ${INK}`, color: INK }}
+          >
+            <BookText size={14} />
+            Libro de Reclamaciones
+          </a>
+        </div>
+        <p className="text-[11px] mt-5" style={{ color: "rgba(36,31,28,0.5)" }}>
+          © 2026 Lobo Burger. Todos los derechos reservados. ·{" "}
+          <a href="/terminos" className="underline">Términos y condiciones</a>
         </p>
       </footer>
 

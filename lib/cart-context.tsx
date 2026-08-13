@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 import { saveOrder } from "@/lib/orders-store";
+import type { Order } from "@/lib/orders-store";
 
 export type CartItem = {
   id: number;
@@ -9,6 +10,8 @@ export type CartItem = {
   price: number;
   qty: number;
 };
+
+export type FulfillmentMode = "pickup" | "delivery" | null;
 
 type CartContextType = {
   items: CartItem[];
@@ -20,16 +23,29 @@ type CartContextType = {
   clear: () => void;
   open: boolean;
   setOpen: (v: boolean) => void;
-  submitOrder: (data: { name: string; phone: string; delivery: boolean; address: string }) => void;
+  fulfillmentMode: FulfillmentMode;
+  setFulfillmentMode: (m: FulfillmentMode) => void;
+  address: string;
+  setAddress: (a: string) => void;
+  submitOrder: (data: { name: string; phone: string; email?: string; culqiChargeId?: string; delivery: boolean; address: string }) => Order;
 };
 
 const CartContext = createContext<CartContextType | null>(null);
 
 const WHATSAPP_NUMBER = "51974983862";
 
+export function buildWhatsAppUrl(order: Order): string {
+  const lines = order.items.map(i => `- ${i.qty}x ${i.name} - S/${i.price * i.qty}`).join("\n");
+  const deliveryLine = order.delivery ? `Delivery a: ${order.address}` : "Para recoger";
+  const msg = `Pedido Lobo Burger - #${order.id}\n\nCliente: ${order.name}\nTelefono: ${order.phone}\n${deliveryLine}\n\n${lines}\n\nTotal: S/${order.total}`;
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [fulfillmentMode, setFulfillmentMode] = useState<FulfillmentMode>(null);
+  const [address, setAddress] = useState("");
 
   const add = (item: Omit<CartItem, "qty">) => {
     setItems((prev) => {
@@ -50,24 +66,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const count = items.reduce((sum, i) => sum + i.qty, 0);
   const clear = () => setItems([]);
 
-  const submitOrder = (data: { name: string; phone: string; delivery: boolean; address: string }) => {
+  const submitOrder = (data: { name: string; phone: string; email?: string; culqiChargeId?: string; delivery: boolean; address: string }): Order => {
     const order = saveOrder({
       ...data,
       items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
       total,
     });
-
-    const lines = items.map(i => `- ${i.qty}x ${i.name} - S/${i.price * i.qty}`).join("\n");
-    const deliveryLine = data.delivery ? `Delivery a: ${data.address}` : "Para recoger";
-    const msg = `Pedido Lobo Burger - #${order.id}\n\nCliente: ${data.name}\nTelefono: ${data.phone}\n${deliveryLine}\n\n${lines}\n\nTotal: S/${total}`;
-
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
     clear();
     setOpen(false);
+    return order;
   };
 
   return (
-    <CartContext.Provider value={{ items, add, remove, update, total, count, clear, open, setOpen, submitOrder }}>
+    <CartContext.Provider value={{
+      items, add, remove, update, total, count, clear, open, setOpen,
+      fulfillmentMode, setFulfillmentMode, address, setAddress, submitOrder,
+    }}>
       {children}
     </CartContext.Provider>
   );

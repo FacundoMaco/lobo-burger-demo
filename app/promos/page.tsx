@@ -130,7 +130,7 @@ export default function PromosPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-white text-base">{promo.title}</h3>
+                          <h2 className="font-bold text-white text-base">{promo.title}</h2>
                           {isActive ? (
                             <span
                               className="pulse-red text-[10px] font-bold px-2 py-0.5 rounded-full"

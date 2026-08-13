@@ -156,7 +156,7 @@ function ValidarTab() {
   };
 
   const sectionTitle = "text-sm font-bold text-white mb-3";
-  const inputCls = "w-full rounded-lg py-2.5 px-3 text-sm text-white outline-none";
+  const inputCls = "w-full rounded-lg py-2.5 px-3 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-offset-0";
   const inputStyle = { background: "#0a0a0a", border: "1px solid #252525" };
 
   return (
@@ -360,7 +360,7 @@ export default function AdminPage() {
         {/* Mobile header */}
         <header className="flex md:hidden items-center justify-between px-4 py-3 sticky top-0 z-40" style={{ background: "#0F0F0F", borderBottom: "1px solid rgba(192,57,43,0.2)" }}>
           <span className="font-bebas tracking-widest" style={{ color: "#C0392B" }}>LOBO ADMIN</span>
-          <button onClick={refresh} className="text-white/30 hover:text-white"><RefreshCw size={14} /></button>
+          <button onClick={refresh} aria-label="Actualizar" className="text-white/30 hover:text-white"><RefreshCw size={14} /></button>
         </header>
 
         {/* Mobile tabs */}
