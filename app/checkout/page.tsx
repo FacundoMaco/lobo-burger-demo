@@ -1,12 +1,30 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCart, buildWhatsAppUrl } from "@/lib/cart-context";
 import { initCulqiCheckout } from "@/lib/culqi";
 import { Navbar } from "@/components/navbar";
+import type { Ubicacion } from "@/components/delivery-map";
 import type { Order } from "@/lib/orders-store";
 import { CreditCard, Check, Store, Bike, MessageCircle, ShoppingBag } from "lucide-react";
+
+// Leaflet toca window al importarse, asi que el mapa solo se carga en el cliente.
+const DeliveryMap = dynamic(
+  () => import("@/components/delivery-map").then(m => m.DeliveryMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="w-full rounded-xl"
+        style={{ height: 240, background: "rgba(36,31,28,0.06)" }}
+      />
+    ),
+  }
+);
+
+const CULQI_CONTAINER_ID = "culqi-container";
 
 const PRIMARY = "#F5A623";
 const ACCENT = "#E63950";
@@ -24,9 +42,11 @@ export default function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; phone?: string; email?: string; address?: string; mode?: string; terms?: string }>({});
+  const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; email?: string; address?: string; mode?: string; terms?: string; ubicacion?: string }>({});
   const [payError, setPayError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
 
   const handlePay = async () => {
@@ -36,16 +56,23 @@ export default function CheckoutPage() {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) errs.email = "Ingresa un email válido";
     if (fulfillmentMode === null) errs.mode = "Elige recojo o delivery";
     if (fulfillmentMode === "delivery" && !address.trim()) errs.address = "Ingresa tu dirección";
+    if (fulfillmentMode === "delivery" && ubicacion && !ubicacion.dentroDeZona) {
+      errs.ubicacion = "Esa dirección está fuera de nuestra zona de reparto";
+    }
     if (!termsAccepted) errs.terms = "Debes aceptar los términos y condiciones";
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setPayError(null);
     setPaying(true);
+    setShowPayment(true);
+
     const result = await initCulqiCheckout({
       amount: total,
       description: "Pedido Lobo Burger",
       email: email.trim(),
+      containerId: CULQI_CONTAINER_ID,
     });
+
     if (result.success) {
       const order = submitOrder({
         name: name.trim(),
@@ -53,14 +80,23 @@ export default function CheckoutPage() {
         email: email.trim(),
         culqiChargeId: result.chargeId,
         delivery: fulfillmentMode === "delivery",
-        address: address.trim(),
+        address: direccionCompleta(),
       });
       setConfirmedOrder(order);
     } else if (!result.cancelled) {
       setPayError(result.error || "No pudimos procesar el pago. Intenta de nuevo.");
+      setShowPayment(false);
     }
     setPaying(false);
   };
+
+  // La direccion que viaja al pedido incluye el punto exacto del mapa.
+  function direccionCompleta(): string {
+    if (fulfillmentMode !== "delivery") return "";
+    const base = address.trim();
+    if (!ubicacion) return base;
+    return `${base} (mapa: https://maps.google.com/?q=${ubicacion.lat.toFixed(6)},${ubicacion.lng.toFixed(6)})`;
+  }
 
   // ── Confirmación ──
   if (confirmedOrder) {
@@ -191,9 +227,17 @@ export default function CheckoutPage() {
                 style={{ ...inputStyle, borderColor: errors.address ? ACCENT : "rgba(36,31,28,0.2)" }}
               />
               {errors.address && <p className="text-xs mt-1" style={{ color: ACCENT }}>{errors.address}</p>}
-              <p className="text-[11px] mt-2" style={{ color: "rgba(36,31,28,0.5)" }}>
-                Delivery disponible hasta ~7.5 km de nuestras sedes (Surquillo y San Juan de Miraflores).
-              </p>
+
+              <div className="mt-4">
+                <DeliveryMap
+                  value={ubicacion}
+                  onChange={u => {
+                    setUbicacion(u);
+                    setErrors(p => ({ ...p, ubicacion: undefined }));
+                  }}
+                />
+                {errors.ubicacion && <p className="text-xs mt-1" style={{ color: ACCENT }}>{errors.ubicacion}</p>}
+              </div>
             </div>
           )}
         </div>
@@ -282,15 +326,36 @@ export default function CheckoutPage() {
           </p>
         )}
 
-        <button
-          onClick={handlePay}
-          disabled={paying}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all hover:brightness-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
-          style={{ background: PRIMARY, color: INK }}
-        >
-          <CreditCard size={17} />
-          {paying ? "Procesando pago..." : `Pagar S/${total}`}
-        </button>
+        {!showPayment && (
+          <button
+            onClick={handlePay}
+            disabled={paying}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all hover:brightness-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
+            style={{ background: PRIMARY, color: INK }}
+          >
+            <CreditCard size={17} />
+            {paying ? "Cargando pago..." : `Pagar S/${total}`}
+          </button>
+        )}
+
+        {/* Formulario de tarjeta de Culqi, embebido en la pagina */}
+        <div className={showPayment ? "block" : "hidden"}>
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,28,0.1)" }}
+          >
+            {/* El iframe de Culqi usa height:100%, asi que el contenedor
+                necesita una altura explicita o colapsa. */}
+            <div id={CULQI_CONTAINER_ID} style={{ height: 620 }} />
+          </div>
+          <button
+            onClick={() => { setShowPayment(false); setPayError(null); }}
+            className="w-full mt-3 py-2.5 text-xs font-semibold underline cursor-pointer"
+            style={{ color: "rgba(36,31,28,0.6)" }}
+          >
+            Volver a editar mis datos
+          </button>
+        </div>
         <p className="text-[11px] text-center mt-3" style={{ color: "rgba(36,31,28,0.45)" }}>
           Pago seguro con Culqi (tarjeta o Yape). Solo aceptamos pago online — no efectivo en pedidos web.
         </p>
