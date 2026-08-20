@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { saveOrder } from "@/lib/orders-store";
 import type { Order } from "@/lib/orders-store";
 
@@ -41,11 +41,45 @@ export function buildWhatsAppUrl(order: Order): string {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
 }
 
+const STORAGE_KEY = "lobo_cart";
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [open, setOpen] = useState(false);
   const [fulfillmentMode, setFulfillmentMode] = useState<FulfillmentMode>(null);
   const [address, setAddress] = useState("");
+  // Hasta leer localStorage no se escribe nada, para no pisar el carrito
+  // guardado con el estado vacio del primer render.
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved.items)) setItems(saved.items);
+        if (saved.fulfillmentMode === "pickup" || saved.fulfillmentMode === "delivery") {
+          setFulfillmentMode(saved.fulfillmentMode);
+        }
+        if (typeof saved.address === "string") setAddress(saved.address);
+      }
+    } catch {
+      // Carrito corrupto: se empieza de cero en vez de romper la pagina.
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ items, fulfillmentMode, address })
+      );
+    } catch {
+      // Modo incognito o storage lleno: el carrito sigue funcionando en memoria.
+    }
+  }, [items, fulfillmentMode, address, hydrated]);
 
   const add = (item: Omit<CartItem, "qty">) => {
     setItems((prev) => {
