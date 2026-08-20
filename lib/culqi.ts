@@ -40,23 +40,78 @@ function loadCulqiScript(): Promise<void> {
   return scriptPromise;
 }
 
-// Paleta de la marca aplicada al formulario de Culqi.
+const INK = "#241F1C";
+const PRIMARY = "#F5A623";
+const MUTED = "#6B6560";
+const BORDER = "rgba(36,31,28,0.18)";
+
+// El formulario de Culqi se estila para que se lea como parte de la pagina:
+// sin su banner (la pagina ya dice Lobo Burger y muestra el total) y sin el
+// campo de email (lo pedimos antes y lo pasamos por client.email).
 const appearance = {
   theme: "default",
-  hiddenCulqiLogo: false,
-  hiddenBannerContent: false,
-  hiddenBanner: false,
+  hiddenCulqiLogo: true,
+  hiddenBannerContent: true,
+  hiddenBanner: true,
   hiddenToolBarAmount: false,
+  hiddenEmail: true,
   menuType: "sliderTop",
   buttonCardPayText: "Pagar",
   logo: "",
   defaultStyle: {
-    bannerColor: "#F5A623",
-    buttonBackground: "#F5A623",
-    menuColor: "#241F1C",
+    buttonBackground: PRIMARY,
+    buttonTextColor: INK,
+    menuColor: INK,
     linksColor: "#E63950",
-    buttonTextColor: "#241F1C",
-    priceColor: "#241F1C",
+    priceColor: INK,
+  },
+  variables: {
+    fontFamily: "'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontWeightNormal: "500",
+    borderRadius: "12px",
+    colorBackground: "#FFFFFF",
+    colorPrimary: PRIMARY,
+    colorPrimaryText: INK,
+    colorText: INK,
+    colorTextSecondary: MUTED,
+    colorTextPlaceholder: "#A9A29C",
+    colorIconTab: INK,
+    colorLogo: "dark",
+  },
+  rules: {
+    ".Culqi-Main-Container": {
+      background: "#FFFFFF",
+      fontFamily: "var(--fontFamily)",
+    },
+    ".Culqi-Toolbar-Price": {
+      color: INK,
+      fontFamily: "var(--fontFamily)",
+      fontWeight: "700",
+    },
+    ".Culqi-Label": {
+      color: MUTED,
+      fontFamily: "var(--fontFamily)",
+      fontSize: "12px",
+      fontWeight: "600",
+    },
+    ".Culqi-Input": {
+      border: `1.5px solid ${BORDER}`,
+      borderRadius: "10px",
+      color: INK,
+      fontFamily: "var(--fontFamily)",
+    },
+    ".Culqi-Input:focus": { border: `2px solid ${PRIMARY}` },
+    ".Culqi-Input.input-valid": { border: `1.5px solid ${BORDER}`, color: INK },
+    ".Culqi-Button": {
+      background: PRIMARY,
+      color: INK,
+      borderRadius: "12px",
+      fontFamily: "var(--fontFamily)",
+      fontWeight: "700",
+    },
+    ".Culqi-Main-Method": { borderRadius: "12px", color: INK },
+    ".Culqi-Menu": { fontFamily: "var(--fontFamily)", color: MUTED },
+    ".Culqi-Menu-Selected": { color: INK },
   },
 };
 

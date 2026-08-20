@@ -165,8 +165,12 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen" style={{ background: "#FFFDF8" }}>
       <Navbar />
-      <div className="max-w-md mx-auto px-4 pt-8 pb-28">
-        <h1 className="font-bebas text-2xl mb-6" style={{ color: INK }}>FINALIZA TU PEDIDO</h1>
+      <div className="max-w-5xl mx-auto px-4 pt-8 pb-28">
+        <h1 className="font-bebas text-2xl md:text-3xl mb-6" style={{ color: INK }}>FINALIZA TU PEDIDO</h1>
+
+        {/* En desktop: datos a la izquierda, pago a la derecha. En movil, una sola columna. */}
+        <div className="grid md:grid-cols-2 md:gap-7 items-start">
+        <div>
 
         {/* Resumen */}
         <div className="rounded-2xl p-5 mb-5" style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,28,0.1)" }}>
@@ -299,6 +303,10 @@ export default function CheckoutPage() {
           </div>
         </div>
 
+        </div>
+
+        <div className="md:sticky md:top-24">
+
         <label className="flex items-start gap-2.5 mb-4 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -345,8 +353,11 @@ export default function CheckoutPage() {
             style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,28,0.1)" }}
           >
             {/* El iframe de Culqi usa height:100%, asi que el contenedor
-                necesita una altura explicita o colapsa. */}
-            <div id={CULQI_CONTAINER_ID} style={{ height: 620 }} />
+                necesita altura explicita o colapsa. El contenido mide 498px
+                (tarjeta) y 509px (Yape) mas 40px de padding propio; de sobrar
+                espacio el form lo reparte como huecos, asi que se deja el
+                minimo que entra sin scroll en ambos metodos. */}
+            <div id={CULQI_CONTAINER_ID} style={{ height: 560 }} />
           </div>
           <button
             onClick={() => { setShowPayment(false); setPayError(null); }}
@@ -365,6 +376,9 @@ export default function CheckoutPage() {
             Libro de Reclamaciones
           </Link>
         </p>
+
+        </div>
+        </div>
       </div>
     </div>
   );
