@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getOrders, updateOrderStatus, saveOrder } from "@/lib/orders-store";
+import { updateOrderStatus, saveOrder } from "@/lib/orders-store";
 import type { Order, OrderStatus } from "@/lib/orders-store";
 import { LayoutDashboard, ShoppingBag, Users, RefreshCw, ClipboardCheck, Check, X } from "lucide-react";
 
@@ -290,7 +290,31 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<OrderStatus | "todos">("todos");
 
-  const refresh = useCallback(() => setOrders(getOrders()), []);
+  // Los pedidos vienen de Supabase, no del localStorage de este navegador:
+  // antes el panel solo veia los pedidos hechos en el mismo dispositivo.
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/pedidos");
+      if (!res.ok) return;
+      const { pedidos } = await res.json();
+      setOrders(
+        (pedidos ?? []).map((p: Record<string, unknown>) => ({
+          id: p.codigo as string,
+          createdAt: p.created_at as string,
+          name: p.cliente_nombre as string,
+          phone: p.cliente_telefono as string,
+          email: p.cliente_email as string,
+          delivery: p.delivery as boolean,
+          address: (p.direccion as string) ?? "",
+          items: p.items as Order["items"],
+          total: (p.total_centimos as number) / 100,
+          status: p.estado as OrderStatus,
+        }))
+      );
+    } catch {
+      // Sin conexion se deja la ultima lista cargada.
+    }
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -298,8 +322,12 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  const handleStatus = (id: string, next: OrderStatus) => {
-    updateOrderStatus(id, next);
+  const handleStatus = async (id: string, next: OrderStatus) => {
+    await fetch("/api/admin/pedidos", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codigo: id, estado: next }),
+    });
     refresh();
   };
 

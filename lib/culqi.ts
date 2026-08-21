@@ -115,21 +115,31 @@ const appearance = {
   },
 };
 
+export type DatosPedido = {
+  items: { id: number; qty: number }[];
+  name: string;
+  phone: string;
+  delivery: boolean;
+  address: string;
+  lat?: number;
+  lng?: number;
+};
+
 export type CulqiCheckoutParams = {
-  amount: number; // en soles
-  description: string;
+  amount: number; // solo para mostrar el monto en el formulario
   email: string;
+  pedido: DatosPedido;
   containerId?: string; // si se pasa, el formulario se embebe ahi en vez de abrir un modal
 };
 
 export type CulqiCheckoutResult =
-  | { success: true; chargeId: string }
+  | { success: true; chargeId: string; codigo: string }
   | { success: false; cancelled?: boolean; error?: string };
 
 export async function initCulqiCheckout({
   amount,
-  description,
   email,
+  pedido,
   containerId,
 }: CulqiCheckoutParams): Promise<CulqiCheckoutResult> {
   await loadCulqiScript();
@@ -182,13 +192,15 @@ export async function initCulqiCheckout({
         const tokenId = culqi.token.id;
         culqi.close();
         try {
+          // Se manda QUE se pidio, no CUANTO cuesta: el total lo recalcula
+          // el servidor contra la carta.
           const res = await fetch("/api/charge", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tokenId, email, amount: amountCents, description }),
+            body: JSON.stringify({ tokenId, email, ...pedido }),
           });
           const data = await res.json();
-          if (res.ok) settle({ success: true, chargeId: data.chargeId });
+          if (res.ok) settle({ success: true, chargeId: data.chargeId, codigo: data.codigo });
           else settle({ success: false, error: data.error });
         } catch {
           settle({ success: false, error: "Error de conexión. Intenta de nuevo." });

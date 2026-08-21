@@ -68,9 +68,18 @@ export default function CheckoutPage() {
 
     const result = await initCulqiCheckout({
       amount: total,
-      description: "Pedido Lobo Burger",
       email: email.trim(),
       containerId: CULQI_CONTAINER_ID,
+      pedido: {
+        // Solo ids y cantidades: el precio lo pone el servidor.
+        items: items.map(i => ({ id: i.id, qty: i.qty })),
+        name: name.trim(),
+        phone: phone.trim(),
+        delivery: fulfillmentMode === "delivery",
+        address: direccionCompleta(),
+        lat: ubicacion?.lat,
+        lng: ubicacion?.lng,
+      },
     });
 
     if (result.success) {
@@ -82,7 +91,7 @@ export default function CheckoutPage() {
         delivery: fulfillmentMode === "delivery",
         address: direccionCompleta(),
       });
-      setConfirmedOrder(order);
+      setConfirmedOrder({ ...order, id: result.codigo });
     } else if (!result.cancelled) {
       setPayError(result.error || "No pudimos procesar el pago. Intenta de nuevo.");
       setShowPayment(false);
