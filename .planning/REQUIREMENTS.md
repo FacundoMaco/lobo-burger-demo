@@ -125,17 +125,56 @@ Bloquean requisitos concretos, no el milestone entero.
 
 ## Traceability
 
-Actualizado durante la creación del roadmap.
+Actualizado durante la creación del roadmap (`ROADMAP.md`, 2026-08-24).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (pendiente de roadmap) | — | Pending |
+| PAY-01 | Phase 1 | Pending |
+| PAY-02 | Phase 1 | Pending |
+| PAY-03 | Phase 1 | Pending |
+| PAY-04 | Phase 1 | Pending |
+| PAY-05 | Phase 1 | Pending |
+| PAY-06 | Phase 1 | Pending |
+| PAY-07 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| CLEAN-02 | Phase 1 | Pending |
+| CLEAN-03 | Phase 1 | Pending |
+| CLEAN-04 | Phase 1 | Pending |
+| MENU-01 | Phase 2 | Pending |
+| MENU-02 | Phase 2 | Pending |
+| MENU-03 | Phase 2 | Pending |
+| MENU-04 | Phase 2 | Pending |
+| OPS-04 | Phase 2 | Pending |
+| OPS-01 | Phase 3 | Pending |
+| OPS-02 | Phase 3 | Pending |
+| OPS-03 | Phase 3 | Pending |
+| OPS-05 | Phase 3 | Pending |
+| OPS-06 | Phase 3 | Pending |
+| OPS-07 | Phase 3 | Pending |
+| OPS-08 | Phase 3 | Pending |
+| DELV-01 | Phase 3 | Pending |
+| DELV-02 | Phase 3 | Pending |
+| DELV-03 | Phase 3 | Pending |
+| DELV-04 | Phase 3 | Pending |
+| TRACK-01 | Phase 4 | Pending |
+| TRACK-02 | Phase 4 | Pending |
+| TRACK-03 | Phase 4 | Pending |
+| TRACK-04 | Phase 4 | Pending |
+| ANLY-01 | Phase 5 | Pending |
+| ANLY-02 | Phase 5 | Pending |
+| ANLY-03 | Phase 5 | Pending |
+| CLEAN-01 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 34 total
-- Mapped to phases: 0
-- Unmapped: 34 ⚠️
+- v1 requirements: 38 total (corregido: el conteo anterior de "34" era un
+  placeholder previo al roadmap; la lista real de arriba suma PAY 7 + OPS 8 +
+  DELV 4 + TRACK 4 + MENU 4 + ANLY 3 + INFRA 4 + CLEAN 4 = 38)
+- Mapped to phases: 38/38 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-24*
-*Last updated: 2026-08-24 after initial definition*
+*Last updated: 2026-08-24 after roadmap creation — traceability mapped, coverage corrected to 38/38*
