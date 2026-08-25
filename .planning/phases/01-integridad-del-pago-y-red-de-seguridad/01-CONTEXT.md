@@ -49,10 +49,17 @@ en Supabase (Fase 2), estado del pedido para el comprador (Fase 4), analítica (
 - **D-15:** El fallo del propio cron alerta (INFRA-02). Un keep-warm que falla en silencio es una cosa más que parece hecha sin hacer lo único para lo que existe.
 - **D-16:** Vercel Hobby limita los cron a una ejecución diaria. Los dos crons de esta fase (keep-warm y reconciliación) se diseñan para esa frecuencia. El planner debería evaluar unificarlos en un solo cron diario que toque la base y reconcilie en la misma pasada.
 
-### Tests
+### Tests y metodología
 
 - **D-17:** Vitest como runner, configurado de forma que después se puedan sumar tests de componentes sin rehacer la config.
 - **D-18:** Cobertura obligatoria de esta fase sobre `app/api/charge/route.ts`: recálculo del total contra la carta, bounds `MIN_CENTS`/`MAX_CENTS`/`MAX_QTY`, la rama de idempotencia `23505`, y la rama de fallo de Supabase después de un cargo exitoso. La lógica de envío todavía no existe (llega en Fase 3) — ese test se escribe cuando exista, no ahora.
+- **D-23:** **La fase se ejecuta con TDD.** Cada tarea que produce lógica arranca con un test que falla, después el código que lo hace pasar, después el refactor. El planner debe escribir las tareas en ese orden explícito, no como "implementar X" con un test al final.
+- **D-24:** **Levantar Vitest es la tarea 1 de la fase, no la última.** Sin runner no hay TDD posible. Esto reordena INFRA-04: deja de ser un requisito que se cierra al final y pasa a ser la precondición de todo lo demás.
+- **D-25:** **Caracterizar antes de refactorizar.** TDD sobre `app/api/charge/route.ts` va a empujar a extraer la lógica de precio y validación a funciones puras. Eso es refactor sobre el camino del dinero, en producción. La secuencia obligatoria es: (1) escribir tests contra el comportamiento **actual** del handler tal como está hoy, (2) verlos pasar en verde sin tocar el código, (3) recién ahí extraer. Si un test de caracterización falla antes de mover una sola línea, eso es un bug preexistente y se trata como hallazgo, no se "arregla" de paso dentro del refactor.
+- **D-26:** Qué es testeable y qué no, para que el planner no prometa cobertura imposible:
+  - **Unitario, sin red:** recálculo de precio, bounds, validación de formato de email/teléfono (PAY-07), la matemática de la ventana del rate limiter, el armado del objeto de la confirmación.
+  - **Con Culqi y Supabase mockeados:** las ramas del route handler y del webhook — idempotencia `23505`, fallo de insert tras cargo exitoso, re-fetch del cargo antes de escribir, carrera webhook vs `/api/charge`.
+  - **No testeable automáticamente en esta fase, y hay que decirlo:** el contrato real del webhook de Culqi (eso lo resuelve la verificación en vivo de PAY-01, D-07), que Sentry efectivamente entregue la alerta a un humano (D-03), y que Vercel dispare el cron. Esos se verifican a mano y se documentan como verificación manual, no se simulan con un test que solo prueba el mock.
 
 ### Validación server-side
 
