@@ -121,7 +121,8 @@ Bloquean requisitos concretos, no el milestone entero.
 | Estado de verificación de la cuenta Culqi (error `DNGA9999` en test) | PAY-01 | Culqi / Jaime |
 | Precios reales de la carta | MENU-03 (carga inicial) | Jaime |
 | Aprobación del gasto de Supabase Pro | Cierre definitivo de INFRA-01 | Jaime |
-| Grupo de Telegram de la cocina + token del bot | OPS-05 | Jaime |
+| Grupo de Telegram de la cocina + token del bot | OPS-05, OPS-06 | Jaime |
+| Grupo de Telegram **de alertas técnicas** + token del bot | PAY-05, INFRA-02 — **adelantado a Fase 1** el 2026-08-25: la research confirmó que el plan gratuito de Sentry alerta solo por email, y PAY-05 exige que un humano se entere el mismo día | Jaime |
 
 ## Traceability
 

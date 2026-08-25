@@ -20,9 +20,13 @@ en Supabase (Fase 2), estado del pedido para el comprador (Fase 4), analítica (
 
 ### Monitoreo y alertas
 
-- **D-01:** Sentry en su plan gratuito (5k errores/mes) es la herramienta de monitoreo. Se acepta el peso que suma al bundle a cambio de stack traces y agrupación de errores.
-- **D-02:** No se crea un canal de alertas propio en esta fase. Las alertas salen por los canales del propio Sentry.
-- **D-03:** ⚠ **Riesgo abierto que la research debe cerrar:** PAY-05 exige que "un humano se entere el mismo día", y el usuario dejó claro que nadie mira el correo durante el turno. Verificar qué canales de alerta admite realmente el plan gratuito de Sentry (¿solo email? ¿webhooks?). Si solo admite email, esta decisión se reevalúa y se agrega un grupo de Telegram exclusivo de alertas — el código de envío a Telegram ya se necesita en Fase 3, así que el costo marginal es bajo.
+- **D-01:** Sentry en su plan gratuito es la herramienta de monitoreo. **Alcance corregido tras la research:** se instrumenta solo servidor y edge (`instrumentation.ts` + `sentry.server.config.ts` + `sentry.edge.config.ts`), sin `instrumentation-client.ts`. Ninguno de los 14 requirements de la fase pide capturar errores de navegador, así que el SDK no entra al bundle del cliente (~26KB gzip que no se pagan).
+- **D-02:** ~~No se crea un canal de alertas propio en esta fase.~~ **REVISADA el 2026-08-25 tras la research** — ver D-03. Sí se crea canal propio.
+- **D-03:** ✅ **Riesgo cerrado.** La research verificó contra `sentry.io/pricing` que el plan Developer (gratuito) alerta **solo por email**; Slack, Discord y webhooks están detrás del plan Team, de pago. Como PAY-05 exige que un humano se entere el mismo día y nadie mira el correo durante el turno, se aplica la contingencia que esta misma decisión ya preveía: **el canal de Telegram de alertas se adelanta de Fase 3 a Fase 1**. Reparto de responsabilidades resultante:
+  - **Sentry** captura y agrupa errores con stack traces. No es el canal de aviso humano.
+  - **`lib/alertas.ts`** con una función `alertaTelegram()` (fetch directo a la API de Telegram, sin SDK) se dispara desde los mismos `catch` que hoy solo hacen `console.error` (`app/api/charge/route.ts:149` y `:158`). Ese es el camino que satisface PAY-05 e INFRA-02.
+  - El código de `alertaTelegram()` lo reusa Fase 3 para el aviso de pedidos a la cocina (OPS-05). Se escribe una vez.
+- **D-03b:** ⚠ **Nuevo bloqueo externo, adelantado a esta fase:** Jaime tiene que crear el bot de Telegram y el grupo de alertas ahora, no en Fase 3. Fallback si no llega a tiempo: `alertaTelegram()` degrada a `console.error` cuando faltan `TELEGRAM_BOT_TOKEN`/`TELEGRAM_ALERT_CHAT_ID`, igual que el resto del código falla cerrado ante configuración ausente. La fase se entrega igual; PAY-05 queda verificable solo cuando lleguen las credenciales.
 
 ### Rate limiting en `/api/charge`
 
