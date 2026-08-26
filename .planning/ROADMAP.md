@@ -49,7 +49,7 @@ a 38/38.
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01: TBD
+- [x] 01-01: TBD
 
 ### Phase 2: Menú vivo en Supabase y control de stock
 **Goal**: El menú vive en una tabla de Supabase, no en `lib/menu.ts`: Jaime cambia precio o marca agotado un producto desde `/admin` sin deploy, y `POST /api/charge` siempre cobra el precio vigente en la base, nunca uno cacheado.
@@ -124,7 +124,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Integridad del pago y red de seguridad | 0/TBD | Not started | - |
+| 1. Integridad del pago y red de seguridad | 1/8 | In Progress|  |
 | 2. Menú vivo en Supabase y control de stock | 0/TBD | Not started | - |
 | 3. Operación del local — horario, delivery cobrado y aviso a cocina | 0/TBD | Not started | - |
 | 4. Seguimiento público del pedido | 0/TBD | Not started | - |
