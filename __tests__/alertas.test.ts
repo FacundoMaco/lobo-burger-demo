@@ -27,9 +27,8 @@ describe("alertaTelegram -- sin configuracion (D-03b)", () => {
     await expect(alertaTelegram("pedido cobrado sin registrar")).resolves.toBeUndefined();
 
     expect(fetch).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("pedido cobrado sin registrar")
-    );
+    expect(errorSpy).toHaveBeenCalled();
+    expect(errorSpy.mock.calls[0].join(" ")).toContain("pedido cobrado sin registrar");
   });
 
   it("sin TELEGRAM_ALERT_CHAT_ID: no llama a fetch, hace console.error con el mensaje, y resuelve sin lanzar", async () => {
@@ -40,9 +39,8 @@ describe("alertaTelegram -- sin configuracion (D-03b)", () => {
     await expect(alertaTelegram("pedido cobrado sin registrar")).resolves.toBeUndefined();
 
     expect(fetch).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("pedido cobrado sin registrar")
-    );
+    expect(errorSpy).toHaveBeenCalled();
+    expect(errorSpy.mock.calls[0].join(" ")).toContain("pedido cobrado sin registrar");
   });
 
   it("con ambas presentes pero vacias (''): mismo comportamiento que sin configurar", async () => {
@@ -102,6 +100,7 @@ describe("alertaTelegram -- rama de fallo (best-effort de verdad)", () => {
 
     await expect(alertaTelegram("algo se rompio")).resolves.toBeUndefined();
 
-    expect(errorSpy).toHaveBeenCalledWith(expect.anything(), expect.stringContaining("401"));
+    expect(errorSpy).toHaveBeenCalled();
+    expect(errorSpy.mock.calls[0].join(" ")).toContain("401");
   });
 });
