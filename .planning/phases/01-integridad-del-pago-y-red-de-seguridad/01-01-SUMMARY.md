@@ -173,3 +173,12 @@ register del plan (T-01-SC) y paso por el checkpoint bloqueante de Task 1.
 Los planes 01-03, 01-05 y 01-06 quedan habilitados para tocar
 `app/api/charge/route.ts` con la red de caracterizacion debajo (`npm run
 test:run` como gate de regresion antes de cada cambio).
+
+## Self-Check: PASSED
+
+Todos los archivos creados (`vitest.config.mts`, `__tests__/menu.test.ts`,
+`__tests__/helpers/supabase-mock.ts`,
+`__tests__/api-charge.caracterizacion.test.ts`,
+`01-HALLAZGOS-CARACTERIZACION.md`, `deferred-items.md`, este `SUMMARY.md`) y
+los 4 commits (`69d90ab`, `c72bed2`, `c8d71d8`, `8cbc675`) fueron verificados
+contra el filesystem y `git log` respectivamente.
