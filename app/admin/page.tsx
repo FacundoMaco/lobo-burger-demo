@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { updateOrderStatus, saveOrder } from "@/lib/orders-store";
 import type { Order, OrderStatus } from "@/lib/orders-store";
 import { LayoutDashboard, ShoppingBag, Users, RefreshCw, ClipboardCheck, Check, X } from "lucide-react";
 
@@ -27,25 +26,6 @@ function timeAgo(iso: string): string {
 function isToday(iso: string): boolean {
   const d = new Date(iso), now = new Date();
   return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-}
-
-const MOCK_NAMES = ["Carlos M.", "Ana R.", "Diego P.", "Maria L.", "Pedro C."];
-const MOCK_ITEMS = [
-  [{ id: 1, name: "Lobo Clasica", price: 18, qty: 1 }, { id: 6, name: "Salchipapa Clasica", price: 10, qty: 1 }],
-  [{ id: 5, name: "La Bestia", price: 28, qty: 1 }, { id: 8, name: "Salchipapa XL", price: 16, qty: 1 }, { id: 11, name: "Limonada", price: 7, qty: 2 }],
-  [{ id: 13, name: "Combo Lobo", price: 25, qty: 2 }],
-];
-
-function generateMockOrder(): void {
-  const items = MOCK_ITEMS[Math.floor(Math.random() * MOCK_ITEMS.length)];
-  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
-  saveOrder({
-    name: MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)],
-    phone: `9${Math.floor(10000000 + Math.random() * 89999999)}`,
-    delivery: Math.random() > 0.5,
-    address: "Av. Los Heroes 123",
-    items, total,
-  });
 }
 
 // ─── ValidarTab ───────────────────────────────────────────────────────────────
@@ -90,10 +70,6 @@ function ValidarTab() {
             pts,
           });
           localStorage.setItem("lobo_member", JSON.stringify(m));
-
-          if (orderId.trim()) {
-            updateOrderStatus(orderId.trim() as string, "entregado");
-          }
 
           showToast({ ok: true, text: `+${pts} Wolfpoints → ${m.name}` });
           setPhone(""); setAmount(""); setOrderId("");
@@ -487,14 +463,7 @@ export default function AdminPage() {
               {orders.length === 0 ? (
                 <div className="text-center py-16">
                   <ShoppingBag size={40} className="mx-auto mb-4 opacity-10" />
-                  <p className="text-sm mb-1" style={{ color: "#555" }}>Aun no hay pedidos. Los pedidos enviados por WhatsApp aparecen aqui.</p>
-                  <button
-                    onClick={() => { generateMockOrder(); refresh(); }}
-                    className="mt-4 px-4 py-2 rounded-lg text-xs font-bold"
-                    style={{ background: "#1a1a1a", color: "#888" }}
-                  >
-                    Agregar pedido de prueba
-                  </button>
+                  <p className="text-sm mb-1" style={{ color: "#555" }}>Aun no hay pedidos. Los pedidos pagados en la web aparecen aqui.</p>
                 </div>
               ) : filteredOrders.length === 0 ? (
                 <p className="text-center py-8 text-sm" style={{ color: "#444" }}>Sin pedidos con este estado</p>
@@ -543,16 +512,6 @@ export default function AdminPage() {
                     );
                   })}
                 </div>
-              )}
-
-              {orders.length > 0 && (
-                <button
-                  onClick={() => { generateMockOrder(); refresh(); }}
-                  className="mt-6 w-full py-2 rounded-lg text-xs font-bold"
-                  style={{ background: "#1a1a1a", color: "#555" }}
-                >
-                  + Agregar pedido de prueba
-                </button>
               )}
             </div>
           )}

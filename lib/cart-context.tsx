@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { saveOrder } from "@/lib/orders-store";
+import { construirOrderLocal } from "@/lib/orders-store";
 import type { Order } from "@/lib/orders-store";
 
 export type CartItem = {
@@ -101,7 +101,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = () => setItems([]);
 
   const submitOrder = (data: { name: string; phone: string; email?: string; culqiChargeId?: string; delivery: boolean; address: string }): Order => {
-    const order = saveOrder({
+    const order = construirOrderLocal({
       ...data,
       items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
       total,
