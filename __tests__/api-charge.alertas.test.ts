@@ -91,7 +91,15 @@ describe("POST /api/charge -- alerta en fallo de insert (no 23505)", () => {
 });
 
 describe("POST /api/charge -- alerta en excepcion de getSupabaseAdmin()", () => {
-  it("dispara alertaTelegram una vez con cargo.id; sigue devolviendo 200", async () => {
+  // NOTA (01-06, PAY-06): getSupabaseAdmin() ahora tambien lo llama el rate
+  // limiter (contarIntento(), ANTES que la persistencia). Si getSupabaseAdmin()
+  // esta rota de raiz -- este test simula justamente eso, un throw en la
+  // funcion factory -- las DOS llamadas fallan de forma independiente: la del
+  // rate limiter (fail-open, Task 1 del plan 01-06) y la de la persistencia
+  // del pedido. Cada una dispara su propia alerta porque son dos fallos
+  // reales y distintos que vale la pena que alguien vea, no un
+  // doble-conteo de lo mismo. Antes de PAY-06 solo existia la segunda.
+  it("dispara alertaTelegram dos veces (rate limiter ciego + persistencia rota); sigue devolviendo 200", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockCulqiCargoOk({ id: "chr_excepcion_1" });
     vi.mocked(getSupabaseAdmin).mockImplementation(() => {
@@ -104,9 +112,12 @@ describe("POST /api/charge -- alerta en excepcion de getSupabaseAdmin()", () => 
     const json = await res.json();
     expect(json.chargeId).toBe("chr_excepcion_1");
 
-    expect(alertaTelegram).toHaveBeenCalledTimes(1);
-    const [mensaje] = vi.mocked(alertaTelegram).mock.calls[0];
-    expect(mensaje).toContain("chr_excepcion_1");
+    expect(alertaTelegram).toHaveBeenCalledTimes(2);
+    const mensajePersistencia = vi
+      .mocked(alertaTelegram)
+      .mock.calls.map(([m]) => m)
+      .find((m) => m.includes("chr_excepcion_1"));
+    expect(mensajePersistencia).toBeDefined();
     expect(errorSpy).toHaveBeenCalled();
   });
 });
