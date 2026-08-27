@@ -118,3 +118,18 @@ None - no external service configuration required.
 ---
 *Phase: 01-integridad-del-pago-y-red-de-seguridad*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+Archivos verificados en disco:
+- FOUND: `lib/validacion.ts`
+- FOUND: `__tests__/validacion.test.ts`
+- FOUND: `__tests__/api-charge.validacion.test.ts`
+- FOUND: `.planning/phases/01-integridad-del-pago-y-red-de-seguridad/01-05-SUMMARY.md`
+
+Commits verificados en `git log`:
+- FOUND: `5bbf385` (test — RED)
+- FOUND: `98ced53` (feat — GREEN lib/validacion.ts)
+- FOUND: `8c9834f` (feat — cableado en /api/charge)
+
+Gate TDD (D-23): secuencia `test(...)` → `feat(...)` → `feat(...)` confirmada en `git log --oneline`, sin commits de refactor (no aplicaba, según el plan).
