@@ -9,6 +9,7 @@ import { getMenuItem } from "@/lib/menu";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { alertaTelegram } from "@/lib/alertas";
 import { validarEmail, validarTelefono } from "@/lib/validacion";
+import { LIMITE_INTENTOS, VENTANA_MS, contarIntento, debeBloquear } from "@/lib/rate-limit";
 
 const MIN_CENTS = 300; // minimo que acepta Culqi
 const MAX_CENTS = 50000; // techo sano para un pedido web
@@ -43,6 +44,28 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return Response.json({ error: "Solicitud inválida" }, { status: 400 });
+  }
+
+  // ── Rate limit (PAY-06) ──
+  // Va ANTES del chequeo de tipos, de la validacion de formato y del
+  // recalculo de precio: un request que se va a rechazar por volumen no
+  // debe consumir ni una lectura de lib/menu.ts, y sobre todo no debe
+  // generar un intento de cobro contra Culqi (eso es exactamente lo que
+  // este limite existe para evitar -- card testing).
+  //
+  // x-forwarded-for puede venir como lista "cliente, proxy1, proxy2"; el
+  // primero es el cliente (confirmado contra la convencion de Vercel, no
+  // hay helper propio de Next para esto).
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : "desconocida";
+  const intentos = await contarIntento(ip, VENTANA_MS);
+  if (debeBloquear(intentos, LIMITE_INTENTOS)) {
+    // Mensaje neutro a proposito: no revela el limite ni cuantos intentos
+    // quedan -- decirle al atacante cuanto le falta es ayudarlo a calibrar.
+    return Response.json(
+      { error: "Demasiados intentos. Espera unos minutos antes de volver a intentar." },
+      { status: 429 }
+    );
   }
 
   const { tokenId, email, items, name, phone } = body;

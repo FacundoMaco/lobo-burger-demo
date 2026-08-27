@@ -238,12 +238,22 @@ describe("POST /api/charge -- delivery", () => {
 });
 
 describe("POST /api/charge -- cargo rechazado por Culqi", () => {
-  it("responde 402 con el mensaje de Culqi y no llama a Supabase", async () => {
+  // NOTA (01-06, PAY-06): esta asercion originalmente esperaba que
+  // getSupabaseAdmin() no se llamara NUNCA en esta rama. Eso dejo de ser
+  // cierto de forma legitima con el rate limiter (PAY-06): el contador de
+  // intentos vive en Supabase y se consulta ANTES que todo lo demas,
+  // incluido el fetch a Culqi -- si se aplicara despues del cobro rechazado
+  // no serviria contra card testing. Lo que esta asercion protegia de
+  // verdad es que un cargo rechazado NUNCA persiste una fila en "pedidos";
+  // eso sigue siendo cierto y es lo que se verifica ahora.
+  it("responde 402 con el mensaje de Culqi y no persiste el pedido en Supabase", async () => {
     mockCulqiRechazado("Tarjeta rechazada");
+    const mock = useSupabaseMock({ data: { codigo: "LB-DEFAULT" }, error: null });
     const res = await POST(req(bodyValido()));
     expect(res.status).toBe(402);
     expect(await res.json()).toEqual({ error: "Tarjeta rechazada" });
-    expect(getSupabaseAdmin).not.toHaveBeenCalled();
+    expect(mock.calls.table).not.toContain("pedidos");
+    expect(mock.calls.insertArgs.length).toBe(0);
   });
 });
 
