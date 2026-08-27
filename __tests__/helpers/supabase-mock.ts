@@ -79,8 +79,15 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
     async rpc(fn: string, params?: Record<string, unknown>) {
       calls.rpcArgs.push({ fn, params });
       const results = config.rpcResults ?? [];
+      if (results.length === 0) {
+        // Default para tests que no configuran rpcResults porque no les
+        // importa el rate limit (validacion, alertas, caracterizacion):
+        // "primer intento", nunca bloquea y nunca dispara la alerta de
+        // fail-open.
+        return { data: 1, error: null };
+      }
       const index = Math.min(calls.rpcArgs.length - 1, results.length - 1);
-      return results[index] ?? { data: null, error: null };
+      return results[index] ?? { data: 1, error: null };
     },
   };
 
