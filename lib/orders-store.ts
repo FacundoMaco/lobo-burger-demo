@@ -1,3 +1,12 @@
+// CLEAN-02: este archivo YA NO persiste pedidos. Los pedidos reales viven en
+// Supabase desde el commit eb9f243 (app/api/charge/route.ts inserta en
+// "pedidos", el panel /admin lee de /api/admin/pedidos). Lo unico que sigue
+// vivo aca es la FORMA del objeto que necesitan la pantalla de confirmacion
+// (app/checkout/page.tsx) y buildWhatsAppUrl (lib/cart-context.tsx), que es
+// el respaldo operativo cuando el insert a Supabase falla. Si en el futuro
+// hace falta "arreglar" la falta de persistencia: no es un bug, es a
+// proposito -- la persistencia real ya existe en Supabase.
+
 export type OrderStatus = "pendiente" | "en_preparacion" | "listo" | "entregado";
 
 export type Order = {
@@ -14,28 +23,11 @@ export type Order = {
   status: OrderStatus;
 };
 
-export function saveOrder(order: Omit<Order, "id" | "createdAt" | "status">): Order {
-  const newOrder: Order = {
+export function construirOrderLocal(order: Omit<Order, "id" | "createdAt" | "status">): Order {
+  return {
     ...order,
     id: `LB-${Date.now()}`,
     createdAt: new Date().toISOString(),
     status: "pendiente",
   };
-  const existing = getOrders();
-  localStorage.setItem("lobo_orders", JSON.stringify([newOrder, ...existing]));
-  return newOrder;
-}
-
-export function getOrders(): Order[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem("lobo_orders") || "[]");
-  } catch {
-    return [];
-  }
-}
-
-export function updateOrderStatus(id: string, status: OrderStatus): void {
-  const orders = getOrders().map(o => o.id === id ? { ...o, status } : o);
-  localStorage.setItem("lobo_orders", JSON.stringify(orders));
 }

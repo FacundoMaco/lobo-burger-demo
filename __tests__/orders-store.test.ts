@@ -1,9 +1,11 @@
-// Caracterizacion (D-25) del comportamiento ACTUAL de saveOrder/buildWhatsAppUrl
-// ANTES de quitar la escritura en localStorage. lib/cart-context.tsx:104 corre
-// en cada checkout real -- estos tests fijan la forma del objeto de
-// confirmacion y del texto de WhatsApp para que el refactor no los rompa.
-import { describe, expect, it, beforeEach } from "vitest";
-import { saveOrder } from "@/lib/orders-store";
+// CLEAN-02: lib/orders-store.ts deja de escribir una copia muerta del
+// pedido en localStorage["lobo_orders"] (nadie la lee desde el commit
+// eb9f243, el panel lee de Supabase). construirOrderLocal reemplaza a
+// saveOrder con la MISMA forma de entrada/salida pero sin persistencia --
+// la garantia de que la confirmacion y buildWhatsAppUrl (respaldo
+// operativo cuando el insert falla) no cambian.
+import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
+import { construirOrderLocal } from "@/lib/orders-store";
 import { buildWhatsAppUrl } from "@/lib/cart-context";
 
 const baseInput = {
@@ -20,13 +22,30 @@ const baseInput = {
   total: 46,
 };
 
-describe("saveOrder (comportamiento actual)", () => {
+describe("construirOrderLocal (comportamiento nuevo -- sin persistencia)", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("NO escribe en localStorage bajo la clave lobo_orders", () => {
+    const spy = vi.spyOn(Storage.prototype, "setItem");
+    construirOrderLocal(baseInput);
+    expect(spy).not.toHaveBeenCalledWith("lobo_orders", expect.anything());
+  });
+
+  it("no toca la clave lobo_cart del carrito", () => {
+    localStorage.setItem("lobo_cart", JSON.stringify({ items: [], fulfillmentMode: null, address: "" }));
+    const before = localStorage.getItem("lobo_cart");
+    construirOrderLocal(baseInput);
+    expect(localStorage.getItem("lobo_cart")).toBe(before);
+  });
+
   it("devuelve un objeto con todos los campos de entrada preservados", () => {
-    const order = saveOrder(baseInput);
+    const order = construirOrderLocal(baseInput);
     expect(order.name).toBe(baseInput.name);
     expect(order.phone).toBe(baseInput.phone);
     expect(order.email).toBe(baseInput.email);
@@ -38,7 +57,7 @@ describe("saveOrder (comportamiento actual)", () => {
   });
 
   it("agrega id que empieza con LB-, createdAt ISO valido, y status pendiente", () => {
-    const order = saveOrder(baseInput);
+    const order = construirOrderLocal(baseInput);
     expect(order.id.startsWith("LB-")).toBe(true);
     expect(new Date(order.createdAt).toISOString()).toBe(order.createdAt);
     expect(order.status).toBe("pendiente");
@@ -47,7 +66,7 @@ describe("saveOrder (comportamiento actual)", () => {
 
 describe("buildWhatsAppUrl (comportamiento actual)", () => {
   it("produce una URL a wa.me con el texto correcto", () => {
-    const order = saveOrder(baseInput);
+    const order = construirOrderLocal(baseInput);
     const url = buildWhatsAppUrl(order);
     expect(url.startsWith("https://wa.me/51974983862?text=")).toBe(true);
 
@@ -61,13 +80,13 @@ describe("buildWhatsAppUrl (comportamiento actual)", () => {
   });
 
   it("con delivery:true el texto contiene 'Delivery a: ' y la direccion", () => {
-    const order = saveOrder({ ...baseInput, delivery: true });
+    const order = construirOrderLocal({ ...baseInput, delivery: true });
     const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
     expect(text).toContain(`Delivery a: ${baseInput.address}`);
   });
 
   it("con delivery:false el texto contiene 'Para recoger'", () => {
-    const order = saveOrder({ ...baseInput, delivery: false });
+    const order = construirOrderLocal({ ...baseInput, delivery: false });
     const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
     expect(text).toContain("Para recoger");
   });
