@@ -11,6 +11,16 @@
 // en vez de usar .from(). El resultado es configurable por llamada via
 // rpcResults (array consumido en orden) para poder simular contadores
 // crecientes en un mismo test.
+//
+// El plan 01-08 (cron de reconciliacion) agrega dos capacidades aditivas,
+// sin tocar el comportamiento que ya usan los planes anteriores:
+//   .from("pedidos").select("id").limit(1) -- keep-warm, thenable directo
+//     (config.selectLimitResult), igual que el query builder real de
+//     supabase-js cuando no se llama a .single()/.maybeSingle().
+//   selectEqResultByValue -- variante de selectEqResult que permite un
+//     resultado distinto por cada valor consultado en .eq(), necesario
+//     porque el cron revisa varios culqi_charge_id en la misma pasada y
+//     cada uno puede tener o no fila en "pedidos".
 
 export type SupabaseSingleResult<T> = {
   data: T | null;
@@ -22,11 +32,22 @@ export type SupabaseRpcResult<T = unknown> = {
   error: { code?: string; message?: string } | null;
 };
 
+export type SupabaseListResult<T = unknown> = {
+  data: T[] | null;
+  error: { code?: string; message?: string } | null;
+};
+
 export type SupabaseMockConfig<TRow extends Record<string, unknown> = Record<string, unknown>> = {
   // Resultado de .insert(...).select(...).single()
   insertResult?: SupabaseSingleResult<TRow>;
   // Resultado de .select(...).eq(...).single() -- usado en la rama 23505
   selectEqResult?: SupabaseSingleResult<TRow>;
+  // Resultado de .select(...).eq(column, value).single() segun el valor
+  // consultado (clave = String(value)). Si el valor no esta en el mapa, cae
+  // a selectEqResult.
+  selectEqResultByValue?: Record<string, SupabaseSingleResult<TRow>>;
+  // Resultado de .select(...).limit(n) -- keep-warm del cron (plan 01-08).
+  selectLimitResult?: SupabaseListResult<TRow>;
   // Resultados de .rpc(...), consumidos en orden de llamada. Si se agotan,
   // se repite el ultimo.
   rpcResults?: SupabaseRpcResult[];
@@ -36,6 +57,7 @@ export type SupabaseMockCalls = {
   table: string[];
   insertArgs: Record<string, unknown>[];
   selectEqArgs: { column: string; value: unknown }[];
+  selectLimitArgs: number[];
   rpcArgs: { fn: string; params: Record<string, unknown> | undefined }[];
 };
 
@@ -46,6 +68,7 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
     table: [],
     insertArgs: [],
     selectEqArgs: [],
+    selectLimitArgs: [],
     rpcArgs: [],
   };
 
@@ -69,8 +92,16 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
               calls.selectEqArgs.push({ column, value });
               return {
                 single: async () =>
-                  config.selectEqResult ?? { data: null, error: null },
+                  config.selectEqResultByValue?.[String(value)] ??
+                  config.selectEqResult ??
+                  { data: null, error: null },
               };
+            },
+            // Thenable directo, sin .single(): igual que el query builder
+            // real de supabase-js cuando se espera una lista, no una fila.
+            limit(n: number) {
+              calls.selectLimitArgs.push(n);
+              return Promise.resolve(config.selectLimitResult ?? { data: [], error: null });
             },
           };
         },
