@@ -78,7 +78,24 @@ describe("consultarCargo -- impura, fetch mockeado", () => {
       amount: 1800,
       state: "venta_exitosa",
       email: "cliente@example.com",
+      metadata: null,
     });
+  });
+
+  it("200 con metadata -> la pasa tal cual, sin interpretarla (eso lo hace el webhook, D-09)", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "chr_test_2",
+        amount: 1800,
+        email: "cliente@example.com",
+        metadata: { pedido: '{"items":[{"id":1,"qty":1}]}' },
+      }),
+    } as Response);
+
+    const cargo = await consultarCargo("chr_test_2");
+
+    expect(cargo?.metadata).toEqual({ pedido: '{"items":[{"id":1,"qty":1}]}' });
   });
 
   it("404 -> null (id inventado, no existe en Culqi)", async () => {

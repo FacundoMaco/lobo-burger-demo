@@ -40,6 +40,11 @@ export type CargoCulqi = {
   amount: number;
   state: string;
   email: string;
+  // Metadata cruda que Culqi devuelve sobre el cargo, sin interpretar. La
+  // opcion C (checkpoint Task 2, plan 01-07) la usa para reconstruir el
+  // pedido cuando el navegador nunca llamo a /api/charge -- pero ese parseo
+  // es responsabilidad del webhook (D-09), no de este modulo de verificacion.
+  metadata: unknown;
 };
 
 // Mismo header que el POST existente en app/api/charge/route.ts:89 (A5 en
@@ -64,5 +69,6 @@ export async function consultarCargo(id: string): Promise<CargoCulqi | null> {
     // supuesto arriba.
     state: typeof data.outcome?.type === "string" ? data.outcome.type : "desconocido",
     email: data.email,
+    metadata: data.metadata ?? null,
   };
 }
