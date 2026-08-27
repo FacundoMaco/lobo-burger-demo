@@ -8,6 +8,7 @@ import * as Sentry from "@sentry/nextjs";
 import { getMenuItem } from "@/lib/menu";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { alertaTelegram } from "@/lib/alertas";
+import { validarEmail, validarTelefono } from "@/lib/validacion";
 
 const MIN_CENTS = 300; // minimo que acepta Culqi
 const MAX_CENTS = 50000; // techo sano para un pedido web
@@ -54,6 +55,20 @@ export async function POST(request: Request) {
     items.length === 0
   ) {
     return Response.json({ error: "Datos del pedido inválidos" }, { status: 400 });
+  }
+
+  // El navegador ya valida formato (app/checkout/page.tsx:56), pero es solo
+  // una sugerencia: un request armado a mano evita el checkout por completo.
+  // Esto corre ANTES del fetch a Culqi para no gastar un intento de cobro
+  // con datos de contacto que de todas formas no sirven para nada.
+  if (!validarEmail(email)) {
+    return Response.json({ error: "El correo no tiene un formato válido" }, { status: 400 });
+  }
+  if (!validarTelefono(phone)) {
+    return Response.json(
+      { error: "El teléfono debe tener 9 dígitos y empezar en 9" },
+      { status: 400 }
+    );
   }
 
   // ── Total calculado en el servidor ──
