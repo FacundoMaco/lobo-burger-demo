@@ -5,23 +5,38 @@
 //   .from("pedidos").select("codigo").eq("culqi_charge_id", id).single()
 // y registra los argumentos de cada eslabon para poder hacer asserts sobre
 // la fila insertada o la columna/valor consultados.
+//
+// Tambien soporta .rpc(nombre, params), agregado en el plan 01-06 para
+// contarIntento() de lib/rate-limit.ts, que llama al RPC increment_rate_limit
+// en vez de usar .from(). El resultado es configurable por llamada via
+// rpcResults (array consumido en orden) para poder simular contadores
+// crecientes en un mismo test.
 
 export type SupabaseSingleResult<T> = {
   data: T | null;
   error: { code?: string; message?: string } | null;
 };
 
+export type SupabaseRpcResult<T = unknown> = {
+  data: T | null;
+  error: { code?: string; message?: string } | null;
+};
+
 export type SupabaseMockConfig<TRow extends Record<string, unknown> = Record<string, unknown>> = {
   // Resultado de .insert(...).select(...).single()
-  insertResult: SupabaseSingleResult<TRow>;
+  insertResult?: SupabaseSingleResult<TRow>;
   // Resultado de .select(...).eq(...).single() -- usado en la rama 23505
   selectEqResult?: SupabaseSingleResult<TRow>;
+  // Resultados de .rpc(...), consumidos en orden de llamada. Si se agotan,
+  // se repite el ultimo.
+  rpcResults?: SupabaseRpcResult[];
 };
 
 export type SupabaseMockCalls = {
   table: string[];
   insertArgs: Record<string, unknown>[];
   selectEqArgs: { column: string; value: unknown }[];
+  rpcArgs: { fn: string; params: Record<string, unknown> | undefined }[];
 };
 
 export function createSupabaseMock<TRow extends Record<string, unknown> = Record<string, unknown>>(
@@ -31,6 +46,7 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
     table: [],
     insertArgs: [],
     selectEqArgs: [],
+    rpcArgs: [],
   };
 
   const client = {
@@ -59,6 +75,12 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
           };
         },
       };
+    },
+    async rpc(fn: string, params?: Record<string, unknown>) {
+      calls.rpcArgs.push({ fn, params });
+      const results = config.rpcResults ?? [];
+      const index = Math.min(calls.rpcArgs.length - 1, results.length - 1);
+      return results[index] ?? { data: null, error: null };
     },
   };
 
