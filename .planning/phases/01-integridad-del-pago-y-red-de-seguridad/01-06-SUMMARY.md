@@ -167,3 +167,19 @@ Ninguno nuevo fuera del threat register de `01-06-PLAN.md`. Los 7 threats (T-01-
 ---
 *Phase: 01-integridad-del-pago-y-red-de-seguridad*
 *Completed (parcial, Task 5 pendiente): 2026-08-26*
+
+## Self-Check: PASSED
+
+Archivos verificados en disco:
+- FOUND: `supabase/migrations/20260825000000_rate_limit.sql`
+- FOUND: `lib/rate-limit.ts`
+- FOUND: `__tests__/rate-limit.test.ts`
+- FOUND: `__tests__/api-charge.rate-limit.test.ts`
+- FOUND: `.planning/phases/01-integridad-del-pago-y-red-de-seguridad/01-06-SUMMARY.md`
+
+Commits verificados en `git log --oneline`:
+- FOUND: `c60ea92` (feat — migracion)
+- FOUND: `c7a29bc` (test — RED lib/rate-limit.ts)
+- FOUND: `f71b3e8` (feat — GREEN lib/rate-limit.ts)
+- FOUND: `2f3fa4c` (test — RED cableado en /api/charge)
+- FOUND: `66e6cd3` (feat — GREEN cableado + ajustes de tests preexistentes)
