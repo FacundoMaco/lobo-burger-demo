@@ -122,6 +122,22 @@ export async function POST(request: Request) {
     return Response.json({ error: "Falta la dirección de entrega" }, { status: 400 });
   }
 
+  // ── Metadata para el webhook (opcion C, checkpoint Task 2 del plan 01-07) ──
+  // El webhook de Culqi (app/api/culqi/webhook/route.ts) no tiene forma de
+  // saber que se pidio si el navegador nunca llega a esta ruta -- viaja aca,
+  // en el momento del cobro, que es cuando SI se conoce todo el pedido.
+  // Deliberadamente minima: solo ids+qty (nunca nombres de producto ni el
+  // carrito completo), porque el limite de tamano del metadata de Culqi no
+  // esta confirmado (01-CULQI-FLUJO.md no existe, PAY-01 sigue PARCIAL). Se
+  // manda como un string JSON bajo una sola clave para no multiplicar campos.
+  const metadataPedido = JSON.stringify({
+    items: detalle.map((d) => ({ id: d.id, qty: d.qty })),
+    nombre: name.trim(),
+    telefono: phone.trim(),
+    delivery,
+    direccion: delivery ? address : null,
+  });
+
   // ── Cargo en Culqi ──
   const res = await fetch("https://api.culqi.com/v2/charges", {
     method: "POST",
@@ -135,6 +151,7 @@ export async function POST(request: Request) {
       email,
       source_id: tokenId,
       description: `Pedido Lobo Burger — ${detalle.length} producto(s)`,
+      metadata: { pedido: metadataPedido },
     }),
   });
 
