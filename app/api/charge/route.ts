@@ -4,8 +4,10 @@
 // CUANTO cuesta. El total se recalcula aca contra lib/menu.ts. Antes el monto
 // venia del cliente y se podia pagar S/3 un pedido de S/38.
 
+import * as Sentry from "@sentry/nextjs";
 import { getMenuItem } from "@/lib/menu";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { alertaTelegram } from "@/lib/alertas";
 
 const MIN_CENTS = 300; // minimo que acepta Culqi
 const MAX_CENTS = 50000; // techo sano para un pedido web
@@ -147,6 +149,14 @@ export async function POST(request: Request) {
         });
       }
       console.error("Pedido cobrado pero no registrado:", cargo.id, error);
+      Sentry.captureException(error, { extra: { cargoId: cargo.id, codigo, totalCents } });
+      await alertaTelegram(
+        `Pedido cobrado pero NO registrado.\n` +
+          `Cargo Culqi: ${cargo.id}\n` +
+          `Codigo: ${codigo}\n` +
+          `Total: S/${totalCents / 100}\n` +
+          `Cliente: ${name.trim()} - ${phone.trim()}`
+      );
     }
 
     return Response.json({
@@ -156,6 +166,14 @@ export async function POST(request: Request) {
     });
   } catch (e) {
     console.error("Pedido cobrado pero no registrado:", cargo.id, e);
+    Sentry.captureException(e, { extra: { cargoId: cargo.id, codigo, totalCents } });
+    await alertaTelegram(
+      `Pedido cobrado pero NO registrado.\n` +
+        `Cargo Culqi: ${cargo.id}\n` +
+        `Codigo: ${codigo}\n` +
+        `Total: S/${totalCents / 100}\n` +
+        `Cliente: ${name.trim()} - ${phone.trim()}`
+    );
     return Response.json({ chargeId: cargo.id, codigo, total: totalCents / 100 });
   }
 }
