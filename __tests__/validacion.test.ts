@@ -15,9 +15,10 @@ describe("validarEmail", () => {
     ["a b@c.com", false], // espacio interno
     ["", false], // vacio
     // Regex laxo (identico al del cliente, app/checkout/page.tsx:56): esto
-    // se acepta porque "b.co" satisface \S+\.\S+ despues del @. Se fija el
-    // comportamiento REAL, no el deseado -- divergir del cliente seria peor.
-    ["@b.co", true],
+    // se rechaza porque \S+ antes del @ exige al menos un caracter y "@b.co"
+    // no tiene ninguno. Se fija el comportamiento REAL, no el deseado --
+    // divergir del cliente seria peor que ser laxo.
+    ["@b.co", false],
   ])("validarEmail(%s) === %s", (email, esperado) => {
     expect(validarEmail(email)).toBe(esperado);
   });
