@@ -124,7 +124,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Integridad del pago y red de seguridad | 1/8 | In Progress|  |
+| 1. Integridad del pago y red de seguridad | 3/8 | In Progress|  |
 | 2. Menú vivo en Supabase y control de stock | 0/TBD | Not started | - |
 | 3. Operación del local — horario, delivery cobrado y aviso a cocina | 0/TBD | Not started | - |
 | 4. Seguimiento público del pedido | 0/TBD | Not started | - |
