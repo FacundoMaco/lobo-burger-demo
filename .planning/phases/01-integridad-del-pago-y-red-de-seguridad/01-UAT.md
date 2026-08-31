@@ -82,8 +82,33 @@ nota: Auto-verificado por codigo. `grep -rn "lobo_orders" app/ lib/ components/`
 
 ### 8. Release deliberado a produccion
 expected: El branch de la Fase 1 (78 commits por delante de origin/main) se despliega a produccion en el orden obligatorio: migraciones (ya aplicadas) -> `CRON_SECRET` en Vercel -> deploy. loboburger.com sigue cobrando sin romperse tras el deploy.
-result: [pending]
-estado_produccion_verificado_2026-08-31: |
+result: pass
+nota: |
+  Desplegado 2026-08-31. main: 8d6d0ef -> 80a92c6 (fast-forward).
+  Unico conflicto del merge: app/api/culqi/webhook/route.ts (add/add) — main tenia
+  el endpoint temporal de 01-02 (30 lineas), la branch el definitivo de 01-07
+  (196 lineas). Resuelto tomando el definitivo. 126/126 tests, tsc y build limpios
+  sobre el resultado del merge ANTES de pushear.
+
+  Env vars cargadas por el usuario antes del deploy: CRON_SECRET, ADMIN_USER,
+  ADMIN_PASSWORD. Verificado en vivo contra loboburger.com:
+
+  | endpoint                        | antes | despues |
+  |---------------------------------|-------|---------|
+  | GET /admin (sin auth)           | 200   | 401     |
+  | GET /admin (credenciales ok)    | 200   | 200     |
+  | GET /admin (clave incorrecta)   | 200   | 401     |
+  | GET /api/admin/pedidos (auth)   | 404   | 200 {"pedidos":[]} |
+  | POST /api/culqi/webhook {}      | 200 "OK" (temporal) | 400 "Payload sin id reconocible" (definitivo) |
+  | GET /api/cron/reconciliacion    | 404   | 401 |
+  | home / checkout                 | 200   | 200 |
+
+  401 y no 503 en /admin confirma que ADMIN_USER/ADMIN_PASSWORD estan cargadas.
+  /api/charge nuevo confirmado vivo: email malformado -> 400 "El correo no tiene un
+  formato válido" (el handler viejo habria dicho "Datos de pago inválidos");
+  qty 999 -> 400 "Cantidad no permitida". Los tres agujeros de produccion cerrados.
+
+estado_produccion_previo_al_deploy: |
   Sondeo en vivo contra loboburger.com + lectura del codigo de main (8d6d0ef).
   Produccion sirve main, NO la branch de la Fase 1. Los tres agujeros siguen abiertos:
 
@@ -107,7 +132,21 @@ result: [pending]
 
 ### 10. Cron de keep-alive y reconciliacion
 expected: Con `CRON_SECRET` cargado y desplegado, el cron `0 9 * * *` corre: sin Bearer correcto devuelve 401, con el correcto devuelve `{ok:true}`, toca `pedidos` (keep-warm) y alerta por Telegram si encuentra un cargo de Culqi sin pedido.
-result: [pending]
+result: pass
+nota: |
+  Verificado en vivo contra produccion tras el deploy:
+  - sin header            -> 401
+  - Bearer inventado      -> 401
+  - Bearer correcto       -> 200 {"ok":true}
+  El 200 implica que la query de keep-warm contra `pedidos` corrio sin error
+  (el handler falla si la query falla), o sea Supabase se toca de verdad.
+  `vercel.json` declara el schedule `0 9 * * *` (04:00 Lima).
+
+  PENDIENTE menor: confirmar en Vercel -> Settings -> Cron Jobs que el job quedo
+  registrado, y re-chequear el 2026-09-07 que Supabase no se autopauso (el free
+  tier pausa a los 7 dias de inactividad; el cron diario lo evita).
+  La rama de alerta por cargo huerfano no se puede verificar hasta tener Telegram
+  configurado (test 11).
 
 ### 11. Alertas de Telegram y Sentry
 expected: Con `TELEGRAM_ALERT_BOT_TOKEN`, `TELEGRAM_ALERT_CHAT_ID` y `SENTRY_DSN` cargados, un fallo de persistencia tras un cobro exitoso manda un mensaje a Telegram con cargo id, codigo, total y datos del cliente, y el error aparece en Sentry.
@@ -116,11 +155,20 @@ result: [pending]
 ## Summary
 
 total: 11
-passed: 7
+passed: 9
 issues: 0
-pending: 4
+pending: 2
 skipped: 0
 blocked: 0
+
+pendientes: |
+  9  — webhook end-to-end: necesita registrar el webhook en CulqiPanel + un pago
+       Yape real de S/5 (el usuario tiene acceso a la cuenta de Culqi de Jaime y
+       puede reembolsar).
+  11 — Telegram/Sentry: el usuario no puede instalar Telegram en el celular por
+       falta de espacio. Alternativa viable: web.telegram.org desde el navegador
+       para crear el bot con @BotFather y el grupo de alertas. Sin esto las
+       alertas quedan en console.error en los logs de Vercel.
 
 ## Gaps
 
