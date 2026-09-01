@@ -137,15 +137,39 @@ export type CulqiCheckoutResult =
   | { success: false; cancelled?: boolean; error?: string };
 
 export async function initCulqiCheckout({
-  amount,
   email,
   pedido,
   containerId,
 }: CulqiCheckoutParams): Promise<CulqiCheckoutResult> {
   await loadCulqiScript();
 
-  const amountCents = Math.round(amount * 100);
   const embedded = Boolean(containerId);
+
+  // Sin una Orden creada de antemano, el Checkout Custom solo muestra
+  // tarjeta y esconde Yape sin avisar por que (ver docs.culqi.com/checkout-custom).
+  // El monto de settings.amount tiene que ser el mismo que el de la orden.
+  let orderId: string;
+  let amountCents: number;
+  try {
+    const orderRes = await fetch("/api/culqi/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: pedido.items,
+        name: pedido.name,
+        phone: pedido.phone,
+        email,
+      }),
+    });
+    const orderData = await orderRes.json();
+    if (!orderRes.ok) {
+      return { success: false, error: orderData.error || "No se pudo iniciar el pago" };
+    }
+    orderId = orderData.orderId;
+    amountCents = orderData.amount;
+  } catch {
+    return { success: false, error: "Error de conexión. Intenta de nuevo." };
+  }
 
   const config = {
     // Ojo: settings solo acepta title/currency/amount/order. Agregar cualquier
@@ -155,6 +179,7 @@ export async function initCulqiCheckout({
       title: "Lobo Burger",
       currency: "PEN",
       amount: amountCents,
+      order: orderId,
     },
     client: { email },
     options: {
