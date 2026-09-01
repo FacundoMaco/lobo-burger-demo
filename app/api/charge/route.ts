@@ -139,6 +139,13 @@ export async function POST(request: Request) {
   });
 
   // ── Cargo en Culqi ──
+  // antifraud_details rellena el nombre/telefono que el panel de Culqi
+  // muestra en el detalle de venta -- sin esto queda con un placeholder
+  // sin resolver ("first_last_name first_last_name").
+  const partesNombre = name.trim().split(/\s+/);
+  const antifraudFirstName = partesNombre[0] || "Cliente";
+  const antifraudLastName = partesNombre.slice(1).join(" ") || antifraudFirstName;
+
   const res = await fetch("https://api.culqi.com/v2/charges", {
     method: "POST",
     headers: {
@@ -152,6 +159,13 @@ export async function POST(request: Request) {
       source_id: tokenId,
       description: `Pedido Lobo Burger — ${detalle.length} producto(s)`,
       metadata: { pedido: metadataPedido },
+      antifraud_details: {
+        first_name: antifraudFirstName,
+        last_name: antifraudLastName,
+        phone_number: phone.trim(),
+        country_code: "PE",
+        ...(delivery && address ? { address, address_city: "Lima" } : {}),
+      },
     }),
   });
 
