@@ -8,7 +8,7 @@
 
 import { getMenuItem } from "@/lib/menu";
 
-const MIN_CENTS = 300; // minimo que acepta Culqi
+const MIN_CENTS = 600; // Culqi exige S/6 para Ordenes (mas alto que S/3 para Cargos)
 const MAX_CENTS = 50000; // techo sano para un pedido web
 const MAX_QTY = 20;
 

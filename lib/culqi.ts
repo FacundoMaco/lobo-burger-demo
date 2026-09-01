@@ -137,6 +137,7 @@ export type CulqiCheckoutResult =
   | { success: false; cancelled?: boolean; error?: string };
 
 export async function initCulqiCheckout({
+  amount,
   email,
   pedido,
   containerId,
@@ -147,9 +148,11 @@ export async function initCulqiCheckout({
 
   // Sin una Orden creada de antemano, el Checkout Custom solo muestra
   // tarjeta y esconde Yape sin avisar por que (ver docs.culqi.com/checkout-custom).
-  // El monto de settings.amount tiene que ser el mismo que el de la orden.
-  let orderId: string;
-  let amountCents: number;
+  // Culqi exige un monto minimo mas alto para Ordenes que para Cargos sueltos
+  // (S/6 vs S/3): si el carrito no llega, o si Culqi esta caido, se degrada
+  // a pago solo con tarjeta en vez de bloquear el pago entero.
+  let orderId: string | undefined;
+  let amountCents = Math.round(amount * 100);
   try {
     const orderRes = await fetch("/api/culqi/order", {
       method: "POST",
@@ -162,13 +165,12 @@ export async function initCulqiCheckout({
       }),
     });
     const orderData = await orderRes.json();
-    if (!orderRes.ok) {
-      return { success: false, error: orderData.error || "No se pudo iniciar el pago" };
+    if (orderRes.ok) {
+      orderId = orderData.orderId;
+      amountCents = orderData.amount;
     }
-    orderId = orderData.orderId;
-    amountCents = orderData.amount;
   } catch {
-    return { success: false, error: "Error de conexión. Intenta de nuevo." };
+    // Sigue sin orden: el pago con tarjeta se mantiene disponible.
   }
 
   const config = {
@@ -179,7 +181,7 @@ export async function initCulqiCheckout({
       title: "Lobo Burger",
       currency: "PEN",
       amount: amountCents,
-      order: orderId,
+      ...(orderId ? { order: orderId } : {}),
     },
     client: { email },
     options: {
