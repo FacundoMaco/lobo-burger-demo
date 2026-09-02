@@ -128,7 +128,48 @@ estado_produccion_previo_al_deploy: |
 
 ### 9. Webhook de Culqi end-to-end (PAY-01)
 expected: Webhook registrado en CulqiPanel apuntando a `https://loboburger.com/api/culqi/webhook`. Un pago Yape real de S/5 crea la fila en `pedidos` con items, nombre, telefono y direccion recuperados de la `metadata` del cargo — incluso si el navegador nunca llama a `/api/charge`. Doble entrega del mismo evento no duplica el pedido.
-result: [pending]
+result: partial
+nota: |
+  Webhook registrado en CulqiPanel: CulqiOnline, charge.creation.succeeded,
+  https://loboburger.com/api/culqi/webhook, v2.0, autenticacion apagada.
+
+  Durante la configuracion se encontraron y arreglaron 2 bugs reales de
+  produccion (no estaban cubiertos por ningun test):
+  1. Culqi Checkout Custom solo muestra tarjeta si `settings.order` viene
+     vacio -- Yape/billeteras necesitan una Orden creada de antemano
+     (POST /v2/orders). Nuevo endpoint /api/culqi/order, recalcula el
+     total server-side igual que /api/charge. Commit 357a250.
+  2. La Orden de Culqi exige S/6 minimo (vs S/3 de los Cargos sueltos) --
+     un carrito bajo ese piso rompia el pago entero con un 502. Se
+     degrada a pago solo-tarjeta si la Orden falla, en vez de bloquear.
+     Commit 903ae52.
+  3. (menor, no bloqueante) /api/charge no mandaba antifraud_details al
+     cargo -- el panel de Culqi mostraba el nombre del cliente como
+     placeholder sin resolver. Commit 875ae41.
+
+  Pago real verificado: 1x Gaseosa x2 = S/10, Yape, cargo
+  chr_live_IKgE8A9QOcbrwhz5, aprobado. Reembolsado despues via
+  "Generar anulacion" en CulqiPanel. Pedido persistido correctamente:
+  codigo LB-MTJATOA2, mismo charge_id, S/10, nombre/telefono/email
+  correctos (verificado por PostgREST, no por el MCP de Supabase --
+  mismo problema de IPv6 de siempre).
+
+  LO QUE FALTA por verificar de este test (no se probo hoy):
+  - El camino donde el navegador NUNCA llama a /api/charge (pestaña
+    cerrada al aprobar) y el pedido se crea SOLO por el webhook. El
+    pago de hoy si completo el POST /api/charge normal.
+  - Doble entrega del mismo evento de webhook no duplica el pedido
+    (proteccion por unique constraint en culqi_charge_id, existe en
+    codigo pero no se disparo en este intento).
+
+  Efecto secundario detectado (no bloqueante): al crear la Orden,
+  Culqi le manda automaticamente al cliente un correo con QR para
+  pagar en efectivo (canal PagoEfectivo), aunque nunca se lo ofrecimos
+  en el checkout. No hay flag en la API de Culqi para desactivarlo.
+  El payment_code nunca sale de nuestro servidor (solo devolvemos
+  {orderId, amount} al navegador), asi que no es explotable por
+  terceros -- pero el correo es confuso para el cliente. Decision
+  pendiente: aceptar como conocido, o buscar mitigacion.
 
 ### 10. Cron de keep-alive y reconciliacion
 expected: Con `CRON_SECRET` cargado y desplegado, el cron `0 9 * * *` corre: sin Bearer correcto devuelve 401, con el correcto devuelve `{ok:true}`, toca `pedidos` (keep-warm) y alerta por Telegram si encuentra un cargo de Culqi sin pedido.
@@ -157,14 +198,17 @@ result: [pending]
 total: 11
 passed: 9
 issues: 0
-pending: 2
+pending: 1
+partial: 1
 skipped: 0
 blocked: 0
 
 pendientes: |
-  9  — webhook end-to-end: necesita registrar el webhook en CulqiPanel + un pago
-       Yape real de S/5 (el usuario tiene acceso a la cuenta de Culqi de Jaime y
-       puede reembolsar).
+  9  — parcial: pago Yape real end-to-end funciono y el pedido quedo bien
+       persistido, pero no se probo el camino "navegador nunca llama a
+       /api/charge, solo el webhook crea el pedido" ni la idempotencia de
+       doble entrega del evento. Requiere otro pago de prueba cerrando la
+       pestana al aprobar en vez de dejar que el checkout complete solo.
   11 — Telegram/Sentry: el usuario no puede instalar Telegram en el celular por
        falta de espacio. Alternativa viable: web.telegram.org desde el navegador
        para crear el bot con @BotFather y el grupo de alertas. Sin esto las
