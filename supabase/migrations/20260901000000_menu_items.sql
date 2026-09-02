@@ -5,9 +5,13 @@
 -- PostgREST serializa numeric como string ("17.90"), lo que rompería
 -- silenciosamente la aritmética de /api/charge. Un entero en céntimos replica
 -- el patrón de pedidos.total_centimos y elimina el problema de raíz.
+--
+-- PROTECCIÓN DE INTEGRIDAD (Hallazgo #1):
+-- La secuencia arranca en 1001 (start with 1001) para evitar que IDs viejos
+-- en carritos guardados en localStorage (1..17) colisionen con los nuevos productos.
 
 create table menu_items (
-  id bigint generated always as identity primary key,
+  id bigint generated always as identity (start with 1001) primary key,
   created_at timestamptz not null default now(),
   category text not null,
   name text not null,

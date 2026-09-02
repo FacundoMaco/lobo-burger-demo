@@ -1,3 +1,4 @@
+import { formatPrice } from "@/lib/utils";
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
@@ -35,13 +36,13 @@ const CartContext = createContext<CartContextType | null>(null);
 const WHATSAPP_NUMBER = "51974983862";
 
 export function buildWhatsAppUrl(order: Order): string {
-  const lines = order.items.map(i => `- ${i.qty}x ${i.name} - S/${i.price * i.qty}`).join("\n");
+  const lines = order.items.map(i => `- ${i.qty}x ${i.name} - ${formatPrice(i.price * i.qty)}`).join("\n");
   const deliveryLine = order.delivery ? `Delivery a: ${order.address}` : "Para recoger";
-  const msg = `Pedido Lobo Burger - #${order.id}\n\nCliente: ${order.name}\nTelefono: ${order.phone}\n${deliveryLine}\n\n${lines}\n\nTotal: S/${order.total}`;
+  const msg = `Pedido Lobo Burger - #${order.id}\n\nCliente: ${order.name}\nTelefono: ${order.phone}\n${deliveryLine}\n\n${lines}\n\nTotal: ${formatPrice(order.total)}`;
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
 }
 
-const STORAGE_KEY = "lobo_cart";
+const STORAGE_KEY = "lobo_cart_v2";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);

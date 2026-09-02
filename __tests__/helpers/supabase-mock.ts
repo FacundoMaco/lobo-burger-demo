@@ -1,26 +1,7 @@
-// Mock encadenable de getSupabaseAdmin(), reusado por los planes 01-03,
-// 01-05, 01-06, 01-07 y 01-08 (rate limit, webhook, cron, etc). Soporta las
-// dos cadenas que hoy usa app/api/charge/route.ts:
-//   .from("pedidos").insert({...}).select("codigo").single()
-//   .from("pedidos").select("codigo").eq("culqi_charge_id", id).single()
-// y registra los argumentos de cada eslabon para poder hacer asserts sobre
-// la fila insertada o la columna/valor consultados.
-//
-// Tambien soporta .rpc(nombre, params), agregado en el plan 01-06 para
-// contarIntento() de lib/rate-limit.ts, que llama al RPC increment_rate_limit
-// en vez de usar .from(). El resultado es configurable por llamada via
-// rpcResults (array consumido en orden) para poder simular contadores
-// crecientes en un mismo test.
-//
-// El plan 01-08 (cron de reconciliacion) agrega dos capacidades aditivas,
-// sin tocar el comportamiento que ya usan los planes anteriores:
-//   .from("pedidos").select("id").limit(1) -- keep-warm, thenable directo
-//     (config.selectLimitResult), igual que el query builder real de
-//     supabase-js cuando no se llama a .single()/.maybeSingle().
-//   selectEqResultByValue -- variante de selectEqResult que permite un
-//     resultado distinto por cada valor consultado en .eq(), necesario
-//     porque el cron revisa varios culqi_charge_id en la misma pasada y
-//     cada uno puede tener o no fila en "pedidos".
+// Mock encadenable de getSupabaseAdmin(), reusado por los planes 01-03 a 01-08,
+// y extendido aditivamente para el plan 02-01 (menú y control de stock):
+//   .from("menu_items").select(...).order("category").order("id") -> selectOrderResult
+//   .from("menu_items").update(patch).eq("id", id) -> updateResult
 
 export type SupabaseSingleResult<T> = {
   data: T | null;
@@ -38,18 +19,12 @@ export type SupabaseListResult<T = unknown> = {
 };
 
 export type SupabaseMockConfig<TRow extends Record<string, unknown> = Record<string, unknown>> = {
-  // Resultado de .insert(...).select(...).single()
   insertResult?: SupabaseSingleResult<TRow>;
-  // Resultado de .select(...).eq(...).single() -- usado en la rama 23505
   selectEqResult?: SupabaseSingleResult<TRow>;
-  // Resultado de .select(...).eq(column, value).single() segun el valor
-  // consultado (clave = String(value)). Si el valor no esta en el mapa, cae
-  // a selectEqResult.
   selectEqResultByValue?: Record<string, SupabaseSingleResult<TRow>>;
-  // Resultado de .select(...).limit(n) -- keep-warm del cron (plan 01-08).
   selectLimitResult?: SupabaseListResult<TRow>;
-  // Resultados de .rpc(...), consumidos en orden de llamada. Si se agotan,
-  // se repite el ultimo.
+  selectOrderResult?: SupabaseListResult<TRow>;
+  updateResult?: { error: { code?: string; message?: string } | null };
   rpcResults?: SupabaseRpcResult[];
 };
 
@@ -58,6 +33,9 @@ export type SupabaseMockCalls = {
   insertArgs: Record<string, unknown>[];
   selectEqArgs: { column: string; value: unknown }[];
   selectLimitArgs: number[];
+  selectOrderArgs: string[];
+  updateArgs: Record<string, unknown>[];
+  updateEqArgs: { column: string; value: unknown }[];
   rpcArgs: { fn: string; params: Record<string, unknown> | undefined }[];
 };
 
@@ -69,6 +47,9 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
     insertArgs: [],
     selectEqArgs: [],
     selectLimitArgs: [],
+    selectOrderArgs: [],
+    updateArgs: [],
+    updateEqArgs: [],
     rpcArgs: [],
   };
 
@@ -86,7 +67,29 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
             },
           };
         },
-        select() {
+        update(patch: Record<string, unknown>) {
+          calls.updateArgs.push(patch);
+          return {
+            eq(column: string, value: unknown) {
+              calls.updateEqArgs.push({ column, value });
+              return Promise.resolve(config.updateResult ?? { error: null });
+            },
+          };
+        },
+        select(cols?: string) {
+          function makeOrderChain(): any {
+            const chain = {
+              order(col: string) {
+                calls.selectOrderArgs.push(col);
+                return makeOrderChain();
+              },
+              then(resolve: any, reject?: any) {
+                return Promise.resolve(config.selectOrderResult ?? { data: [], error: null }).then(resolve, reject);
+              },
+            };
+            return chain;
+          }
+
           return {
             eq(column: string, value: unknown) {
               calls.selectEqArgs.push({ column, value });
@@ -97,11 +100,13 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
                   { data: null, error: null },
               };
             },
-            // Thenable directo, sin .single(): igual que el query builder
-            // real de supabase-js cuando se espera una lista, no una fila.
             limit(n: number) {
               calls.selectLimitArgs.push(n);
               return Promise.resolve(config.selectLimitResult ?? { data: [], error: null });
+            },
+            order(col: string) {
+              calls.selectOrderArgs.push(col);
+              return makeOrderChain();
             },
           };
         },
@@ -111,10 +116,6 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
       calls.rpcArgs.push({ fn, params });
       const results = config.rpcResults ?? [];
       if (results.length === 0) {
-        // Default para tests que no configuran rpcResults porque no les
-        // importa el rate limit (validacion, alertas, caracterizacion):
-        // "primer intento", nunca bloquea y nunca dispara la alerta de
-        // fail-open.
         return { data: 1, error: null };
       }
       const index = Math.min(calls.rpcArgs.length - 1, results.length - 1);
