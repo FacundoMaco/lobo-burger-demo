@@ -4,6 +4,17 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { MenuItem } from "@/lib/menu";
 
+// Orden canonico de las categorias reales de la tabla `menu_items`, consumido
+// por los route handlers cuando el plan 02-02 los migre.
+export const MENU_CATEGORIES = [
+  "Enchiladas",
+  "Broaster",
+  "Salchipapas / Power Plates",
+  "Combos xtremos",
+  "Bebidas",
+  "Hamburguesas",
+] as const;
+
 type MenuItemRow = {
   id: number;
   category: string;
