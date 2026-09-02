@@ -4,14 +4,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mocks obligatorios de entorno
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({
-  unstable_cache: (fn: any) => fn,
+  unstable_cache: <T>(fn: T) => fn,
   revalidateTag: vi.fn(),
 }));
 
 import { revalidateTag } from "next/cache";
 import { createSupabaseMock } from "./helpers/supabase-mock";
 
-let mockClient: any;
+let mockClient: ReturnType<typeof createSupabaseMock>["client"];
 vi.mock("@/lib/supabase", () => ({
   getSupabaseAdmin: () => mockClient,
 }));

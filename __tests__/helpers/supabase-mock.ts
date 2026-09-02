@@ -28,6 +28,16 @@ export type SupabaseMockConfig<TRow extends Record<string, unknown> = Record<str
   rpcResults?: SupabaseRpcResult[];
 };
 
+// Cadena recursiva de .order(): supabase-js permite encadenar N .order() y
+// recien resuelve al await, sin .single(). Es thenable, no Promise.
+export type SupabaseOrderChain<TRow> = {
+  order(col: string): SupabaseOrderChain<TRow>;
+  then(
+    resolve: (value: SupabaseListResult<TRow>) => unknown,
+    reject?: (reason: unknown) => unknown
+  ): Promise<unknown>;
+};
+
 export type SupabaseMockCalls = {
   table: string[];
   insertArgs: Record<string, unknown>[];
@@ -76,18 +86,17 @@ export function createSupabaseMock<TRow extends Record<string, unknown> = Record
             },
           };
         },
-        select(cols?: string) {
-          function makeOrderChain(): any {
-            const chain = {
+        select() {
+          function makeOrderChain(): SupabaseOrderChain<TRow> {
+            return {
               order(col: string) {
                 calls.selectOrderArgs.push(col);
                 return makeOrderChain();
               },
-              then(resolve: any, reject?: any) {
+              then(resolve, reject) {
                 return Promise.resolve(config.selectOrderResult ?? { data: [], error: null }).then(resolve, reject);
               },
             };
-            return chain;
           }
 
           return {
