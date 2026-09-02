@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1 planned — 8 plans, 14/14 requirements, plan-check blockers resueltos
-last_updated: "2026-08-26T20:31:33.014Z"
+stopped_at: Phase 2 UI-SPEC approved
+last_updated: "2026-09-02T02:42:00.661Z"
 last_activity: 2026-08-26 -- Phase 01 execution started
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 0
+  completed_plans: 7
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 Phase: 01 (integridad-del-pago-y-red-de-seguridad) — EXECUTING
 Plan: 1 of 8
 Status: Executing Phase 01
-Last activity: 2026-08-26 -- Phase 01 execution started
+Last activity: 2026-09-02 - Completed quick task 260902-3pr: Restaurar build verde tras revisión de código
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -76,6 +76,14 @@ Ninguno registrado aún.
 - [Fase 4] TRACK-03 (email de cambio de estado) bloqueado por `RESEND_API_KEY` + correo del negocio, pendientes de Jaime.
 - [Fase 5] ANLY-01/02 bloqueado por acceso a Meta Business (ID de Pixel) y propiedad de GA4, pendientes de Jaime.
 - General: producción cobra plata real hoy — ningún cambio de fase puede dejar el checkout roto durante el despliegue.
+- [Fase 2] El plan 02-01 dejó el build roto a propósito ("quedan rotos a nivel de import hasta el plan 02-02, es esperado"). Se revirtió en el quick task 260902-3pr. La premisa queda anulada por el Guardrail 1: cero builds rotos entre tareas.
+- [Fase 2] `/api/admin/puntos` y `/api/admin/canjear` no existen. El KDS táctil de `app/admin/page.tsx` que los consume está en cuarentena en `.context/kds-admin-page.tsx.bak` hasta que 02-02 cierre esas rutas.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260902-3pr | Restaurar build verde tras revisión de código (use client, lib/menu.ts, admin KDS) | 2026-09-02 | 959ae91 | [260902-3pr-restaurar-build-verde-use-client-en-cart](./quick/260902-3pr-restaurar-build-verde-use-client-en-cart/) |
 
 ## Deferred Items
 
@@ -87,6 +95,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-25T16:42:53.932Z
-Stopped at: Phase 1 planned — 8 plans, 14/14 requirements, plan-check blockers resueltos
-Resume file: .planning/phases/01-integridad-del-pago-y-red-de-seguridad/01-01-PLAN.md
+Last session: 2026-09-02T02:42:00.644Z
+Stopped at: Phase 2 UI-SPEC approved
+Resume file: .planning/phases/02-men-vivo-en-supabase-y-control-de-stock/02-UI-SPEC.md
