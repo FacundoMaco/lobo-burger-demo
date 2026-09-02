@@ -336,7 +336,32 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
   const [showPrinterHelp, setShowPrinterHelp] = useState(false);
-  const [autoPrint, setAutoPrint] = useState(false);
+  const [autoPrint, setAutoPrint] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const saved = localStorage.getItem("lobo_auto_print");
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+  const autoPrintRef = useRef(true);
+  useEffect(() => {
+    autoPrintRef.current = autoPrint;
+  }, [autoPrint]);
+  const knownOrderIdsRef = useRef<Set<string>>(new Set());
+  const initialLoadRef = useRef(true);
+
+  const handleToggleAutoPrint = () => {
+    setAutoPrint(prev => {
+      const next = !prev;
+      autoPrintRef.current = next;
+      try {
+        localStorage.setItem("lobo_auto_print", String(next));
+      } catch {}
+      return next;
+    });
+  };
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
@@ -384,9 +409,30 @@ export default function AdminPage() {
         status: p.estado as OrderStatus,
       }));
 
-      const newPending = mapped.filter(o => o.status === "pendiente").length;
-      if (prevPendingRef.current !== null && newPending > prevPendingRef.current) {
-        if (audioEnabledRef.current) playOrderChime();
+      const pendingOrders = mapped.filter(o => o.status === "pendiente");
+      const newPending = pendingOrders.length;
+
+      if (initialLoadRef.current) {
+        // En la primera carga, registrar IDs existentes sin disparar impresión
+        mapped.forEach(o => knownOrderIdsRef.current.add(o.id));
+        initialLoadRef.current = false;
+      } else {
+        // Detectar nuevos pedidos que ingresan en vivo desde la web
+        const incomingOrders = pendingOrders.filter(o => !knownOrderIdsRef.current.has(o.id));
+        incomingOrders.forEach(o => knownOrderIdsRef.current.add(o.id));
+
+        if (incomingOrders.length > 0) {
+          if (audioEnabledRef.current) playOrderChime();
+
+          // Auto-impresión directa en ticketera térmica (80mm)
+          if (autoPrintRef.current) {
+            const toPrint = incomingOrders[0];
+            setPrintingOrder(toPrint);
+            setTimeout(() => {
+              window.print();
+            }, 400);
+          }
+        }
       }
       prevPendingRef.current = newPending;
 
@@ -933,7 +979,7 @@ export default function AdminPage() {
 
                   {/* Auto-impresión de comandas & Guía 80mm */}
                   <button
-                    onClick={() => setAutoPrint(!autoPrint)}
+                    onClick={handleToggleAutoPrint}
                     className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors"
                     style={{
                       background: autoPrint ? "rgba(255,214,0,0.15)" : "#141414",
