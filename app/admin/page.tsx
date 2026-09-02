@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
+import { ThermalTicketModal, PrinterHelpModal } from "@/components/thermal-ticket";
 import {
   LayoutDashboard,
   ExternalLink,
@@ -26,6 +27,8 @@ import {
   EyeOff,
   LogOut,
   ArrowLeft,
+  Printer,
+  HelpCircle,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
@@ -331,6 +334,9 @@ function ValidarTab() {
 export default function AdminPage() {
   const [tab,    setTab]    = useState<Tab>("pedidos");
   const [orders, setOrders] = useState<Order[]>([]);
+  const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
+  const [showPrinterHelp, setShowPrinterHelp] = useState(false);
+  const [autoPrint, setAutoPrint] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
@@ -535,9 +541,9 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Footer & Botón Táctil de 50px */}
+        {/* Footer, Botón de Impresión Térmica & Botón Táctil de 50px */}
         <div>
-          <div className="flex items-center justify-between pb-2" style={{ borderTop: "1px solid #1c1c1c" }}>
+          <div className="flex items-center justify-between pb-2 mb-2" style={{ borderTop: "1px solid #1c1c1c" }}>
             <span className="font-bebas text-lg" style={{ color: YELLOW }}>
               Total {formatPrice(o.total)}
             </span>
@@ -545,6 +551,20 @@ export default function AdminPage() {
               <Check size={11} /> Pagado
             </span>
           </div>
+
+          {/* Botón Imprimir Comanda Térmica 80mm */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPrintingOrder(o);
+            }}
+            className="w-full flex items-center justify-center gap-1.5 py-2 mb-2 rounded-lg text-[11px] font-bold text-neutral-300 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
+            title="Imprimir o previsualizar ticket térmico de comanda (80mm)"
+          >
+            <Printer size={13} className="text-yellow-400" />
+            <span>Imprimir Comanda (80mm)</span>
+          </button>
 
           {cfg.next ? (
             <button
@@ -910,6 +930,30 @@ export default function AdminPage() {
                     {audioEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
                     <span className="hidden sm:inline">{audioEnabled ? "Timbre ON" : "Muted"}</span>
                   </button>
+
+                  {/* Auto-impresión de comandas & Guía 80mm */}
+                  <button
+                    onClick={() => setAutoPrint(!autoPrint)}
+                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors"
+                    style={{
+                      background: autoPrint ? "rgba(255,214,0,0.15)" : "#141414",
+                      border: `1px solid ${autoPrint ? YELLOW : "#222"}`,
+                      color: autoPrint ? YELLOW : "#666",
+                    }}
+                    title="Imprimir automáticamente al sonar nuevo pedido"
+                  >
+                    <Printer size={13} />
+                    <span className="hidden sm:inline">Auto-print: {autoPrint ? "ON" : "OFF"}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowPrinterHelp(true)}
+                    className="p-1 rounded text-neutral-400 hover:text-white transition-colors"
+                    style={{ background: "#141414", border: "1px solid #222" }}
+                    title="Guía de configuración para ticketera térmica de 80mm"
+                  >
+                    <HelpCircle size={13} />
+                  </button>
                   <button onClick={refresh} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors">
                     <RefreshCw size={13} /> Actualizar
                   </button>
@@ -1124,6 +1168,18 @@ export default function AdminPage() {
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+
+      {/* Modal de Comanda Térmica 80mm */}
+      <ThermalTicketModal
+        order={printingOrder}
+        onClose={() => setPrintingOrder(null)}
+      />
+
+      {/* Guía de Configuración de Impresora */}
+      <PrinterHelpModal
+        isOpen={showPrinterHelp}
+        onClose={() => setShowPrinterHelp(false)}
+      />
     </div>
   );
 }
