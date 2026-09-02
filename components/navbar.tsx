@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { BookOpen, Tag, Star, ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
@@ -8,7 +9,7 @@ import { useCart } from "@/lib/cart-context";
 const navLinks = [
   { href: "/", label: "Carta", icon: BookOpen },
   { href: "/promos", label: "Promos", icon: Tag },
-  { href: "/puntos", label: "Mis Puntos", icon: Star },
+  { href: "/puntos", label: "Puntos (Pronto)", icon: Star },
 ];
 
 const PRIMARY = "#F5A623";
@@ -31,10 +32,15 @@ export function Navbar() {
           borderBottom: "1px solid rgba(36,31,28,0.1)",
         }}
       >
-        <Link href="/" className="flex items-center gap-2">
-          <span className="font-bebas text-xl" style={{ color: INK }}>
-            LOBO <span style={{ color: ACCENT }}>BURGER</span>
-          </span>
+        <Link href="/" className="flex items-center gap-2 group">
+          <Image
+            src="/images/lobo-logo-official.png"
+            alt="Lobo Burger"
+            width={170}
+            height={32}
+            priority
+            className="h-7 w-auto object-contain transition-transform group-hover:scale-105"
+          />
         </Link>
 
         <div className="flex items-center gap-1">
@@ -75,8 +81,15 @@ export function Navbar() {
           borderBottom: "1px solid rgba(36,31,28,0.1)",
         }}
       >
-        <Link href="/" className="font-bebas text-lg" style={{ color: INK }}>
-          LOBO <span style={{ color: ACCENT }}>BURGER</span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/images/lobo-logo-official.png"
+            alt="Lobo Burger"
+            width={130}
+            height={24}
+            priority
+            className="h-5.5 w-auto object-contain"
+          />
         </Link>
 
         <button

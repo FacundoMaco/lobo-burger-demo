@@ -85,13 +85,15 @@ Ninguno registrado aún.
 |---|-------------|------|--------|-----------|
 | 260902-3pr | Restaurar build verde tras revisión de código (use client, lib/menu.ts, admin KDS) | 2026-09-02 | 959ae91 | [260902-3pr-restaurar-build-verde-use-client-en-cart](./quick/260902-3pr-restaurar-build-verde-use-client-en-cart/) |
 
-## Deferred Items
+## Deferred Items & Future Backlog
 
-Items acknowledged and carried forward from previous milestone close:
+Items acknowledged and carried forward for upcoming iterations:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| Admin | Gestor de Promociones en `/admin` (crear, pausar, editar vigencia) | Backlog | 2026-09-02 |
+| Fidelización | Backend y canjes de Wolfpoints en mesa/caja (`/puntos` ahora en teaser) | Backlog | 2026-09-02 |
+| Hardware | Impresora térmica física ESC/POS (80mm) para comandas en cocina | Backlog | 2026-09-02 |
 
 ## Session Continuity
 

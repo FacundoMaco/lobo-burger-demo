@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Navbar } from "@/components/navbar";
+import Image from "next/image";
 import { Share2, Check, Clock, Calendar, Utensils, Sparkles, Flame, Cake } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -43,7 +44,7 @@ const promos: PromoItem[] = [
     title: "Combo Lobo a S/20",
     description: "El Combo Lobo completo (hamburguesa + salchipapa + gaseosa) por solo S/20. Solo por web.",
     conditions: "Precio exclusivo para clientes que muestren esta pantalla. Precio regular S/25.",
-    vigencia: "Mes de junio",
+    vigencia: "Vigente este mes",
     time: "Todo el horario",
     status: "ACTIVO",
   },
@@ -77,23 +78,30 @@ export default function PromosPage() {
     <div className="min-h-screen" style={{ background: "#0D0000" }}>
       <Navbar />
 
-      {/* Header */}
+      {/* Header Brandeado */}
       <section
-        className="relative px-6 py-14 text-center overflow-hidden"
+        className="relative px-6 py-12 text-center overflow-hidden"
         style={{ background: "#FFD600" }}
       >
-        <div className="relative z-10">
+        <div className="relative z-10 max-w-lg mx-auto">
           <div className="flex justify-center mb-3">
-            <Flame size={40} style={{ color: "#0D0000" }} />
+            <Image
+              src="/images/lobo-badge.png"
+              alt="Lobo Burger"
+              width={72}
+              height={72}
+              priority
+              className="w-16 h-16 rounded-full object-contain shadow-md"
+            />
           </div>
-          <h1 className="font-bebas text-5xl md:text-6xl tracking-widest" style={{ color: "#0D0000" }}>
-            PROMOS <span style={{ color: "#DC2626" }}>EXCLUSIVAS</span> WEB
+          <h1 className="font-bebas text-4xl md:text-5xl tracking-wider text-black leading-none">
+            PROMOS <span style={{ color: "#C0392B" }}>DEL LOCAL</span>
           </h1>
-          <p className="mt-2 font-semibold text-sm tracking-widest uppercase" style={{ color: "#7F1D1D" }}>
-            Solo disponibles mostrando esta pantalla
+          <p className="mt-2 font-bold text-xs md:text-sm tracking-wider uppercase text-black/80">
+            Muestra esta pantalla al cajero en cualquiera de nuestras sedes
           </p>
-          <p className="mt-2 text-xs max-w-sm mx-auto" style={{ color: "#A16207" }}>
-            Enseña tu celular al pedir y listo. Sin codigos, sin complicaciones.
+          <p className="mt-1 text-xs text-neutral-800 font-medium">
+            Surquillo (Av. Aviación 3877) & SJM (Av. Vargas Machuca 526)
           </p>
         </div>
       </section>

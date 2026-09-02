@@ -1,8 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import Link from "next/link";
+
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
-import { LayoutDashboard, ShoppingBag, Users, RefreshCw, ClipboardCheck, Check, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  ExternalLink,
+  ShoppingBag,
+  Users,
+  RefreshCw,
+  ClipboardCheck,
+  Check,
+  X,
+  Flame,
+  Clock,
+  Volume2,
+  VolumeX,
+  RotateCcw,
+  GripVertical,
+  Lock,
+  User as UserIcon,
+  Eye,
+  EyeOff,
+  LogOut,
+  ArrowLeft,
+} from "lucide-react";
+import { formatPrice } from "@/lib/utils";
 
 const YELLOW = "#FFD600";
 
@@ -26,6 +51,48 @@ function timeAgo(iso: string): string {
 function isToday(iso: string): boolean {
   const d = new Date(iso), now = new Date();
   return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+
+
+// Singleton AudioContext para evitar fugas de recursos en el monitor de cocina
+let globalAudioCtx: AudioContext | null = null;
+function playOrderChime() {
+  try {
+    if (!globalAudioCtx) {
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      globalAudioCtx = new AudioContextClass();
+    }
+    if (globalAudioCtx.state === "suspended") {
+      globalAudioCtx.resume();
+    }
+    const t = globalAudioCtx.currentTime;
+
+    const osc1 = globalAudioCtx.createOscillator();
+    const gain1 = globalAudioCtx.createGain();
+    osc1.frequency.setValueAtTime(880, t);
+    gain1.gain.setValueAtTime(0.25, t);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc1.connect(gain1);
+    gain1.connect(globalAudioCtx.destination);
+    osc1.start(t);
+    osc1.stop(t + 0.3);
+
+    const osc2 = globalAudioCtx.createOscillator();
+    const gain2 = globalAudioCtx.createGain();
+    osc2.frequency.setValueAtTime(1318.5, t + 0.1);
+    gain2.gain.setValueAtTime(0.3, t + 0.1);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    osc2.connect(gain2);
+    gain2.connect(globalAudioCtx.destination);
+    osc2.start(t + 0.1);
+    osc2.stop(t + 0.5);
+  } catch {
+    // Ignorar si el navegador bloquea audio antes de la primera interacción
+  }
+}
+
+function minutesAgo(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
 }
 
 // ─── ValidarTab ───────────────────────────────────────────────────────────────
@@ -262,31 +329,62 @@ function ValidarTab() {
 // ─── AdminPage ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
-  const [tab,    setTab]    = useState<Tab>("dashboard");
+  const [tab,    setTab]    = useState<Tab>("pedidos");
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filter, setFilter] = useState<OrderStatus | "todos">("todos");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [pedidosView, setPedidosView] = useState<"kds" | "historial">("kds");
+  const [channelFilter, setChannelFilter] = useState<"todos" | "delivery" | "pickup">("todos");
+
+  // KDS Interactivo & Recuperación de Errores
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<OrderStatus | null>(null);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const audioEnabledRef = useRef(true);
+  useEffect(() => {
+    audioEnabledRef.current = audioEnabled;
+  }, [audioEnabled]);
+  const [undoAction, setUndoAction] = useState<{ id: string; prev: OrderStatus; next: OrderStatus } | null>(null);
+
+  const prevPendingRef = useRef<number | null>(null);
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Los pedidos vienen de Supabase, no del localStorage de este navegador:
   // antes el panel solo veia los pedidos hechos en el mismo dispositivo.
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/pedidos");
+      if (res.status === 401) {
+        setIsAuthenticated(false);
+        return;
+      }
       if (!res.ok) return;
+      setIsAuthenticated(true);
       const { pedidos } = await res.json();
-      setOrders(
-        (pedidos ?? []).map((p: Record<string, unknown>) => ({
-          id: p.codigo as string,
-          createdAt: p.created_at as string,
-          name: p.cliente_nombre as string,
-          phone: p.cliente_telefono as string,
-          email: p.cliente_email as string,
-          delivery: p.delivery as boolean,
-          address: (p.direccion as string) ?? "",
-          items: p.items as Order["items"],
-          total: (p.total_centimos as number) / 100,
-          status: p.estado as OrderStatus,
-        }))
-      );
+      const mapped: Order[] = (pedidos ?? []).map((p: Record<string, unknown>) => ({
+        id: p.codigo as string,
+        createdAt: p.created_at as string,
+        name: p.cliente_nombre as string,
+        phone: p.cliente_telefono as string,
+        email: p.cliente_email as string,
+        delivery: p.delivery as boolean,
+        address: (p.direccion as string) ?? "",
+        items: p.items as Order["items"],
+        total: (p.total_centimos as number) / 100,
+        status: p.estado as OrderStatus,
+      }));
+
+      const newPending = mapped.filter(o => o.status === "pendiente").length;
+      if (prevPendingRef.current !== null && newPending > prevPendingRef.current) {
+        if (audioEnabledRef.current) playOrderChime();
+      }
+      prevPendingRef.current = newPending;
+
+      setOrders(mapped);
     } catch {
       // Sin conexion se deja la ultima lista cargada.
     }
@@ -299,12 +397,40 @@ export default function AdminPage() {
   }, [refresh]);
 
   const handleStatus = async (id: string, next: OrderStatus) => {
+    const order = orders.find(o => o.id === id);
+    if (!order) return;
+    const prev = order.status;
+
+    // Actualización optimista inmediata
+    setOrders(list => list.map(o => o.id === id ? { ...o, status: next } : o));
+
+    setUndoAction({ id, prev, next });
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => setUndoAction(null), 6000);
+
+    try {
+      await fetch("/api/admin/pedidos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo: id, estado: next }),
+      });
+    } catch {
+      // Revertir en fallo de red
+      setOrders(list => list.map(o => o.id === id ? { ...o, status: prev } : o));
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!undoAction) return;
+    const { id, prev } = undoAction;
+    setOrders(list => list.map(o => o.id === id ? { ...o, status: prev } : o));
+    setUndoAction(null);
+
     await fetch("/api/admin/pedidos", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ codigo: id, estado: next }),
+      body: JSON.stringify({ codigo: id, estado: prev }),
     });
-    refresh();
   };
 
   const todayOrders = orders.filter(o => isToday(o.createdAt));
@@ -318,7 +444,6 @@ export default function AdminPage() {
     { id: "validar",   label: "Validar",    icon: ClipboardCheck  },
   ];
 
-  const filteredOrders = filter === "todos" ? orders : orders.filter(o => o.status === filter);
 
   const clientMap: Record<string, { name: string; phone: string; count: number; total: number }> = {};
   for (const o of orders) {
@@ -328,13 +453,305 @@ export default function AdminPage() {
   }
   const clients = Object.values(clientMap).sort((a, b) => b.total - a.total);
 
+
+  // Renderizador de Tarjeta de Comanda para el KDS
+  function renderKdsCard(o: Order, currentStatus: OrderStatus) {
+    const cfg = statusConfig[o.status];
+    const mins = minutesAgo(o.createdAt);
+    const isUrgent = mins > 20;
+    const isWarning = mins >= 10 && mins <= 20;
+
+    // Barra Goal-Gradient de 3 pasos
+    const progressPct = currentStatus === "pendiente" ? "33%" : currentStatus === "en_preparacion" ? "66%" : "100%";
+    const progressColor = currentStatus === "pendiente" ? YELLOW : currentStatus === "en_preparacion" ? "#F39C12" : "#2ecc71";
+
+    return (
+      <div
+        key={o.id}
+        draggable
+        onDragStart={e => {
+          setDraggedId(o.id);
+          e.dataTransfer.setData("text/plain", o.id);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        className="rounded-xl p-3.5 flex flex-col justify-between transition-all cursor-grab active:cursor-grabbing hover:border-neutral-700"
+        style={{
+          background: "#141414",
+          border: `1px solid ${cfg.border}40`,
+          borderLeft: `4px solid ${cfg.border}`,
+        }}
+      >
+        <div>
+          {/* Barra de progreso Goal-Gradient */}
+          <div className="w-full h-1 rounded-full mb-2.5 overflow-hidden" style={{ background: "#222" }}>
+            <div className="h-full transition-all" style={{ width: progressPct, background: progressColor }} />
+          </div>
+
+          {/* Header del Ticket */}
+          <div className="flex items-start justify-between gap-2 pb-2 mb-2" style={{ borderBottom: "1px solid #222" }}>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-bold text-white">#{o.id}</span>
+                {/* Timer SLA */}
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded"
+                  style={{
+                    background: isUrgent ? "rgba(231,76,60,0.2)" : isWarning ? "rgba(255,214,0,0.15)" : "rgba(46,204,113,0.15)",
+                    color: isUrgent ? "#e74c3c" : isWarning ? YELLOW : "#2ecc71",
+                    border: `1px solid ${isUrgent ? "#e74c3c" : isWarning ? YELLOW : "#2ecc71"}40`,
+                  }}
+                >
+                  <Clock size={10} />
+                  {mins}m
+                </span>
+              </div>
+              <p className="font-bold text-sm text-white mt-1 leading-tight">{o.name}</p>
+              <p className="text-xs mt-0.5" style={{ color: "#777" }}>
+                {o.phone} &nbsp;|&nbsp; {o.delivery ? `Delivery: ${o.address}` : "Para recoger"}
+              </p>
+            </div>
+
+            <div className="text-right shrink-0 flex flex-col items-end gap-1">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: cfg.bg, color: cfg.border }}>
+                {cfg.label}
+              </span>
+              <span className="text-[9px] flex items-center gap-0.5" style={{ color: "#444" }}>
+                <GripVertical size={10} /> arrastrar
+              </span>
+            </div>
+          </div>
+
+          {/* Lista de Items */}
+          <div className="mb-3 space-y-1">
+            {o.items.map((item, i) => (
+              <p key={i} className="text-xs flex items-baseline">
+                <span className="font-bold font-mono mr-1.5" style={{ color: YELLOW }}>{item.qty}x</span>
+                <span className="text-neutral-200">{item.name}</span>
+                <span className="ml-auto font-mono text-[11px]" style={{ color: "#555" }}>
+                  {formatPrice(item.price * item.qty)}
+                </span>
+              </p>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer & Botón Táctil de 50px */}
+        <div>
+          <div className="flex items-center justify-between pb-2" style={{ borderTop: "1px solid #1c1c1c" }}>
+            <span className="font-bebas text-lg" style={{ color: YELLOW }}>
+              Total {formatPrice(o.total)}
+            </span>
+            <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+              <Check size={11} /> Pagado
+            </span>
+          </div>
+
+          {cfg.next ? (
+            <button
+              onClick={() => handleStatus(o.id, cfg.next!)}
+              className="w-full h-12 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow"
+              style={{
+                background: statusConfig[cfg.next].border,
+                color: cfg.next === "listo" ? "#fff" : "#000",
+              }}
+            >
+              {cfg.next === "en_preparacion" ? (
+                <>
+                  <Flame size={15} /> A LA PLANCHA
+                </>
+              ) : cfg.next === "listo" ? (
+                <>
+                  <Check size={15} /> MARCAR COMO LISTO
+                </>
+              ) : (
+                <>
+                  <Check size={15} /> {o.delivery ? "DESPACHAR MOTORIZADO" : "ENTREGAR EN MOSTRADOR"}
+                </>
+              )}
+            </button>
+          ) : (
+            <div className="text-center py-2 text-xs" style={{ color: "#555" }}>
+              Pedido entregado
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginUser.trim() || !loginPass.trim()) {
+      setLoginError("Ingresa tu usuario y contraseña");
+      return;
+    }
+    setLoginLoading(true);
+    setLoginError("");
+
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: loginUser.trim(), pass: loginPass.trim() }),
+      });
+
+      if (res.ok) {
+        setIsAuthenticated(true);
+        setLoginUser("");
+        setLoginPass("");
+        refresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setLoginError(data.error || "Credenciales incorrectas");
+      }
+    } catch {
+      setLoginError("Error de conexión con el servidor");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/login", { method: "DELETE" });
+    setIsAuthenticated(false);
+  };
+
+  // Pantalla de Login Brandeada si no está autenticado
+  if (isAuthenticated === false) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+        style={{ background: "#080808", color: "#fff" }}
+      >
+        {/* Fondo sutil con resplandor */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-20"
+          style={{
+            background: "radial-gradient(circle at 50% 30%, rgba(192,57,43,0.3) 0%, transparent 70%)",
+          }}
+        />
+
+        <div
+          className="w-full max-w-md rounded-2xl p-7 relative z-10 shadow-2xl border"
+          style={{ background: "#121212", borderColor: "#222" }}
+        >
+          {/* Branding Oficial */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="mb-2 transition-transform hover:scale-105">
+              <Image
+                src="/images/lobo-logo-official-dark.png"
+                alt="Lobo Burger"
+                width={240}
+                height={45}
+                priority
+                className="h-10 w-auto object-contain"
+              />
+            </div>
+            <p className="font-bebas text-base tracking-widest mt-1 text-white">PANEL OPERATIVO DE COCINA</p>
+            <p className="text-xs mt-0.5 text-neutral-500">Ingresa tus credenciales para acceder al KDS</p>
+          </div>
+
+          {/* Formulario de Login */}
+          <form onSubmit={handleLogin} className="space-y-4">
+            {loginError && (
+              <div
+                className="px-3.5 py-2.5 rounded-xl text-xs font-semibold text-center border"
+                style={{
+                  background: "rgba(231,76,60,0.12)",
+                  color: "#e74c3c",
+                  borderColor: "rgba(231,76,60,0.3)",
+                }}
+              >
+                {loginError}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+                Usuario
+              </label>
+              <div className="relative flex items-center">
+                <UserIcon size={16} className="absolute left-3.5 text-neutral-500 pointer-events-none" />
+                <input
+                  type="text"
+                  value={loginUser}
+                  onChange={e => setLoginUser(e.target.value)}
+                  placeholder="Usuario del sistema"
+                  autoFocus
+                  required
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-sm bg-neutral-900 border border-neutral-800 text-white placeholder:text-neutral-600 outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+                Contraseña
+              </label>
+              <div className="relative flex items-center">
+                <Lock size={16} className="absolute left-3.5 text-neutral-500 pointer-events-none" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={loginPass}
+                  onChange={e => setLoginPass(e.target.value)}
+                  placeholder="Contraseña"
+                  required
+                  className="w-full pl-10 pr-11 py-3 rounded-xl text-sm bg-neutral-900 border border-neutral-800 text-white placeholder:text-neutral-600 outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-neutral-500 hover:text-neutral-300 transition-colors p-1"
+                  aria-label={showPassword ? "Ocultar clave" : "Mostrar clave"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="w-full h-12 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-2 shadow-lg"
+              style={{ background: YELLOW, color: "#000" }}
+            >
+              {loginLoading ? (
+                <RefreshCw size={15} className="animate-spin" />
+              ) : (
+                "INGRESAR AL PANEL"
+              )}
+            </button>
+          </form>
+
+          {/* Pie del modal */}
+          <div className="mt-6 pt-4 border-t border-neutral-900 text-center">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+            >
+              <ArrowLeft size={12} />
+              Volver a la tienda pública
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex" style={{ background: "#080808", color: "#fff" }}>
       {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col w-56 min-h-screen sticky top-0" style={{ background: "#0F0F0F", borderRight: "1px solid rgba(192,57,43,0.2)" }}>
         <div className="px-5 py-6" style={{ borderBottom: "1px solid rgba(192,57,43,0.2)" }}>
-          <p className="font-bebas text-lg tracking-widest leading-none">LOBO BURGER</p>
-          <p className="text-[10px]" style={{ color: "#C0392B" }}>PANEL ADMIN</p>
+          <Image
+            src="/images/lobo-logo-official-dark.png"
+            alt="Lobo Burger"
+            width={160}
+            height={30}
+            className="h-6 w-auto object-contain"
+          />
+          <p className="text-[10px] font-bold tracking-widest mt-1.5" style={{ color: "#C0392B" }}>PANEL ADMIN</p>
         </div>
         <nav className="flex-1 p-3 flex flex-col gap-1">
           {navItems.map(({ id, label, icon: Icon }) => (
@@ -358,13 +775,46 @@ export default function AdminPage() {
             </button>
           ))}
         </nav>
+
+        {/* Enlace Volver a la Tienda y Cerrar Sesión */}
+        <div className="p-3 border-t flex flex-col gap-1.5" style={{ borderColor: "#1a1a1a" }}>
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-white hover:border-neutral-700 transition-all"
+            style={{ background: "#141414", border: "1px solid #222" }}
+          >
+            <span className="flex items-center gap-2">
+              <ExternalLink size={13} />
+              Volver a la Tienda
+            </span>
+            <span className="text-[10px] text-neutral-500">↗</span>
+          </a>
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-all text-left"
+          >
+            <LogOut size={13} />
+            Cerrar Sesión
+          </button>
+        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Mobile header */}
         <header className="flex md:hidden items-center justify-between px-4 py-3 sticky top-0 z-40" style={{ background: "#0F0F0F", borderBottom: "1px solid rgba(192,57,43,0.2)" }}>
-          <span className="font-bebas tracking-widest" style={{ color: "#C0392B" }}>LOBO ADMIN</span>
-          <button onClick={refresh} aria-label="Actualizar" className="text-white/30 hover:text-white"><RefreshCw size={14} /></button>
+          <div className="flex items-center gap-2">
+            <Image src="/images/lobo-logo-official-dark.png" alt="Lobo Burger" width={110} height={20} className="h-4.5 w-auto object-contain" />
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" style={{ background: "rgba(192,57,43,0.25)", color: "#E74C3C" }}>ADMIN</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-neutral-400 hover:text-white">
+              <ExternalLink size={12} /> Tienda
+            </a>
+            <button onClick={refresh} aria-label="Actualizar" className="text-white/30 hover:text-white"><RefreshCw size={14} /></button>
+          </div>
         </header>
 
         {/* Mobile tabs */}
@@ -437,80 +887,175 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* PEDIDOS */}
+          {/* PEDIDOS - KDS KANBAN TACTIL CON ESTILOS BASE */}
           {tab === "pedidos" && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h1 className="font-bebas text-3xl md:text-4xl tracking-widest">PEDIDOS</h1>
-                <button onClick={refresh} className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white">
-                  <RefreshCw size={13} /> Actualizar
-                </button>
+                <div className="flex items-center gap-3">
+                  <h1 className="font-bebas text-3xl md:text-4xl tracking-widest leading-none">KDS COCINA</h1>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "rgba(192,57,43,0.2)", color: "#E74C3C", border: "1px solid rgba(192,57,43,0.4)" }}>
+                    TACTIL
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const next = !audioEnabled;
+                      setAudioEnabled(next);
+                      if (next) playOrderChime();
+                    }}
+                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors"
+                    style={{ background: "#141414", border: "1px solid #222", color: audioEnabled ? "#2ecc71" : "#666" }}
+                  >
+                    {audioEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
+                    <span className="hidden sm:inline">{audioEnabled ? "Timbre ON" : "Muted"}</span>
+                  </button>
+                  <button onClick={refresh} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors">
+                    <RefreshCw size={13} /> Actualizar
+                  </button>
+                </div>
               </div>
 
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-5">
-                {(["todos", "pendiente", "en_preparacion", "listo", "entregado"] as const).map(f => (
+              {/* Barra de Filtros Simplificada */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                {/* 1. Modos Principales: KDS Activo vs Historial */}
+                <div className="flex items-center gap-2 p-1 rounded-xl" style={{ background: "#111", border: "1px solid #1f1f1f" }}>
                   <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
-                    style={{ background: filter === f ? YELLOW : "#1a1a1a", color: filter === f ? "#7B0000" : "#666" }}
+                    onClick={() => setPedidosView("kds")}
+                    className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+                    style={{
+                      background: pedidosView === "kds" ? YELLOW : "transparent",
+                      color: pedidosView === "kds" ? "#7B0000" : "#888",
+                    }}
                   >
-                    {f === "todos" ? "Todos" : statusConfig[f].label}
+                    Tablero KDS (Cocina)
                   </button>
-                ))}
+                  <button
+                    onClick={() => setPedidosView("historial")}
+                    className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
+                    style={{
+                      background: pedidosView === "historial" ? YELLOW : "transparent",
+                      color: pedidosView === "historial" ? "#7B0000" : "#888",
+                    }}
+                  >
+                    Historial Despachados
+                    <span className="text-[10px] font-mono opacity-70">
+                      ({orders.filter(o => o.status === "entregado").length})
+                    </span>
+                  </button>
+                </div>
+
+                {/* 2. Sub-filtro por Canal (Todos, Delivery, Recojo) */}
+                <div className="flex items-center gap-1.5">
+                  {(["todos", "delivery", "pickup"] as const).map(ch => (
+                    <button
+                      key={ch}
+                      onClick={() => setChannelFilter(ch)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                      style={{
+                        background: channelFilter === ch ? "#222" : "transparent",
+                        color: channelFilter === ch ? "#fff" : "#666",
+                        border: "1px solid",
+                        borderColor: channelFilter === ch ? "#333" : "transparent",
+                      }}
+                    >
+                      {ch === "todos" && "Todos los canales"}
+                      {ch === "delivery" && "Solo Delivery"}
+                      {ch === "pickup" && "Solo Recojo"}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {orders.length === 0 ? (
                 <div className="text-center py-16">
                   <ShoppingBag size={40} className="mx-auto mb-4 opacity-10" />
-                  <p className="text-sm mb-1" style={{ color: "#555" }}>Aun no hay pedidos. Los pedidos pagados en la web aparecen aqui.</p>
+                  <p className="text-sm mb-1" style={{ color: "#555" }}>Aun no hay pedidos en la base de datos.</p>
                 </div>
-              ) : filteredOrders.length === 0 ? (
-                <p className="text-center py-8 text-sm" style={{ color: "#444" }}>Sin pedidos con este estado</p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {filteredOrders.map(o => {
-                    const cfg = statusConfig[o.status];
+              ) : pedidosView === "kds" ? (
+                /* TABLERO KDS DE 3 COLUMNAS */
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(["pendiente", "en_preparacion", "listo"] as const).map(colStatus => {
+                    const colCfg = statusConfig[colStatus];
+                    const colOrders = orders
+                      .filter(o => o.status === colStatus)
+                      .filter(o => {
+                        if (channelFilter === "delivery") return o.delivery;
+                        if (channelFilter === "pickup") return !o.delivery;
+                        return true;
+                      });
+                    const isDragOver = dragOverCol === colStatus;
+
                     return (
                       <div
-                        key={o.id}
-                        className="rounded-xl p-4"
-                        style={{ background: "#141414", border: `1px solid ${cfg.border}40`, borderLeft: `3px solid ${cfg.border}` }}
+                        key={colStatus}
+                        onDragOver={e => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          if (dragOverCol !== colStatus) setDragOverCol(colStatus);
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverCol === colStatus) setDragOverCol(null);
+                        }}
+                        onDrop={e => {
+                          e.preventDefault();
+                          setDragOverCol(null);
+                          const id = e.dataTransfer.getData("text/plain") || draggedId;
+                          if (id) handleStatus(id, colStatus);
+                          setDraggedId(null);
+                        }}
+                        className="rounded-xl flex flex-col transition-all min-h-[420px]"
+                        style={{
+                          background: "#0d0d0d",
+                          border: isDragOver ? `2px dashed ${colCfg.border}` : "1px solid #1a1a1a",
+                        }}
                       >
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div>
-                            <p className="font-bold text-sm">{o.name} <span className="font-mono text-xs" style={{ color: "#555" }}>{o.id}</span></p>
-                            <p className="text-xs mt-0.5" style={{ color: "#666" }}>{o.phone} &nbsp;|&nbsp; {o.delivery ? `Delivery: ${o.address}` : "Para recoger"}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: cfg.bg, color: cfg.border }}>
-                              {cfg.label}
+                        {/* Cabecera de Columna */}
+                        <div
+                          className="px-4 py-3 rounded-t-xl flex items-center justify-between"
+                          style={{ background: colCfg.bg, borderBottom: `1px solid ${colCfg.border}30` }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ background: colCfg.border }} />
+                            <span className="font-bebas text-lg tracking-wider" style={{ color: colCfg.border }}>
+                              {colCfg.label.toUpperCase()}
                             </span>
-                            <p className="text-xs mt-1" style={{ color: "#555" }}>{timeAgo(o.createdAt)}</p>
                           </div>
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: colCfg.border, color: colStatus === "listo" ? "#fff" : "#000" }}>
+                            {colOrders.length}
+                          </span>
                         </div>
-                        <div className="mb-3">
-                          {o.items.map((item, i) => (
-                            <p key={i} className="text-xs" style={{ color: "#888" }}>
-                              {item.qty}x {item.name} — S/{item.price * item.qty}
-                            </p>
-                          ))}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="font-bebas text-xl" style={{ color: YELLOW }}>Total S/{o.total}</span>
-                          {cfg.next && (
-                            <button
-                              onClick={() => handleStatus(o.id, cfg.next!)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:opacity-80"
-                              style={{ background: statusConfig[cfg.next].border, color: cfg.next === "listo" ? "#fff" : "#0a0a0a" }}
-                            >
-                              {statusConfig[cfg.next].label}
-                            </button>
+
+                        {/* Contenedor de Tarjetas */}
+                        <div className="p-3 flex-1 flex flex-col gap-3 overflow-y-auto">
+                          {colOrders.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center py-12 text-center" style={{ color: "#333" }}>
+                              {colStatus === "pendiente" ? <ShoppingBag size={28} className="opacity-20 mb-2" /> : colStatus === "en_preparacion" ? <Flame size={28} className="opacity-20 mb-2" /> : <Check size={28} className="opacity-20 mb-2" />}
+                              <p className="text-xs">Sin pedidos en esta etapa</p>
+                            </div>
+                          ) : (
+                            colOrders.map(o => renderKdsCard(o, colStatus))
                           )}
                         </div>
                       </div>
                     );
                   })}
+                </div>
+              ) : (
+                /* VISTA HISTORIAL (PEDIDOS ENTREGADOS) */
+                <div className="flex flex-col gap-3">
+                  {orders.filter(o => o.status === "entregado").length === 0 ? (
+                    <p className="text-center py-8 text-sm" style={{ color: "#444" }}>Aún no hay pedidos entregados en el historial</p>
+                  ) : (
+                    orders
+                      .filter(o => o.status === "entregado")
+                      .filter(o => {
+                        if (channelFilter === "delivery") return o.delivery;
+                        if (channelFilter === "pickup") return !o.delivery;
+                        return true;
+                      })
+                      .map(o => renderKdsCard(o, o.status))
+                  )}
                 </div>
               )}
             </div>
@@ -551,6 +1096,26 @@ export default function AdminPage() {
 
           {/* VALIDAR */}
           {tab === "validar" && <ValidarTab />}
+
+
+          {/* Toast de Deshacer para recuperación de errores */}
+          {undoAction && (
+            <div
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce"
+              style={{ background: "#1c1c1c", border: "1px solid #333" }}
+            >
+              <p className="text-xs font-medium text-white">
+                Pedido #{undoAction.id} movido a {statusConfig[undoAction.next].label}
+              </p>
+              <button
+                onClick={handleUndo}
+                className="px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1 active:scale-95 transition-all"
+                style={{ background: YELLOW, color: "#000" }}
+              >
+                <RotateCcw size={11} /> Deshacer
+              </button>
+            </div>
+          )}
 
         </main>
       </div>

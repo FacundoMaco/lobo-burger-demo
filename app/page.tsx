@@ -169,15 +169,26 @@ export default function HomePage() {
       <Navbar />
       <LocationBar />
 
-      {/* Hero — carrusel de promociones (bloque primary) */}
-      <section id="promos" style={{ background: PRIMARY }}>
-        <div className="px-4 pt-10 pb-6 max-w-md mx-auto text-center">
-          <h1 className="hero-logo font-bebas leading-none" style={{ fontSize: "clamp(34px,8vw,56px)", color: INK }}>
-            LOBO <span style={{ color: "#FFFFFF" }}>BURGER</span>
-          </h1>
-          <p className="hero-tagline text-sm font-semibold uppercase tracking-[0.25em] mt-2 mb-8" style={{ color: "rgba(36,31,28,0.65)" }}>
-            Salvaje de Sabor
-          </p>
+      {/* Hero — Identidad Oficial & Carrusel de Promociones */}
+      <section id="promos" className="relative overflow-hidden" style={{ background: PRIMARY }}>
+        <div className="px-4 pt-8 pb-6 max-w-md mx-auto text-center relative z-10">
+          {/* Logotipo Oficial Auténtico de Lobo Burger */}
+          <div className="flex flex-col items-center justify-center mb-4">
+            <div className="my-2 transition-transform hover:scale-105">
+              <Image
+                src="/images/lobo-logo-official.png"
+                alt="Lobo Burger"
+                width={440}
+                height={82}
+                priority
+                className="w-72 sm:w-80 md:w-96 h-auto object-contain drop-shadow-md"
+              />
+            </div>
+            <p className="hero-tagline text-xs font-bold uppercase tracking-[0.22em] mt-1.5 text-black/75">
+              Hamburguesas & Broaster · Surquillo & SJM
+            </p>
+          </div>
+
           <PromoSlider promos={heroPromos} />
         </div>
       </section>
@@ -222,33 +233,38 @@ export default function HomePage() {
       {/* Local */}
       <LocalReel />
 
-      {/* Footer */}
-      <footer className="px-6 py-10 text-center" style={{ background: PRIMARY_SOFT }}>
-        <p className="font-bebas text-2xl">
-          <span style={{ color: INK }}>LOBO </span>
-          <span style={{ color: ACCENT }}>BURGER</span>
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-4 mt-4" style={{ color: "rgba(36,31,28,0.65)" }}>
-          <span className="flex items-center gap-1.5 text-sm"><Clock size={13} style={{ color: ACCENT }} />Lun-Dom 12pm-11pm</span>
-          <span className="flex items-center gap-1.5 text-sm"><Bike size={13} style={{ color: ACCENT }} />Delivery hasta ~7.5 km por sede</span>
-          <span className="flex items-center gap-1.5 text-sm"><Phone size={13} style={{ color: ACCENT }} />+51 974 983 862</span>
-          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: ACCENT }} />Av. Aviación 3877, La Calera - Surquillo</span>
-          <span className="flex items-center gap-1.5 text-sm"><MapPin size={13} style={{ color: ACCENT }} />Av. Vargas Machuca 526, CT - SJM</span>
+      {/* Footer con Branding Oficial Limpio */}
+      <footer className="relative overflow-hidden px-6 py-12 text-center" style={{ background: PRIMARY_SOFT }}>
+        <div className="relative z-10 flex flex-col items-center">
+          <Image
+            src="/images/lobo-logo-official.png"
+            alt="Lobo Burger"
+            width={180}
+            height={34}
+            className="h-7 w-auto object-contain mb-3"
+          />
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-4 max-w-3xl" style={{ color: "rgba(36,31,28,0.75)" }}>
+            <span className="flex items-center gap-1.5 text-xs font-semibold"><Clock size={13} style={{ color: ACCENT }} />Lun-Dom 12pm-11pm</span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold"><Bike size={13} style={{ color: ACCENT }} />Delivery Surquillo & SJM</span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold"><Phone size={13} style={{ color: ACCENT }} />+51 974 983 862</span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold"><MapPin size={13} style={{ color: ACCENT }} />Av. Aviación 3877, La Calera - Surquillo</span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold"><MapPin size={13} style={{ color: ACCENT }} />Av. Vargas Machuca 526, CT - SJM</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+            <a
+              href="/libro-reclamaciones"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-neutral-50 transition-colors"
+              style={{ background: "#FFFFFF", border: `1.5px solid ${INK}`, color: INK }}
+            >
+              <BookText size={14} />
+              Libro de Reclamaciones
+            </a>
+          </div>
+          <p className="text-[11px] mt-6" style={{ color: "rgba(36,31,28,0.5)" }}>
+            © 2026 Lobo Burger. Hecho para comer salvaje. ·{" "}
+            <a href="/terminos" className="underline">Términos y condiciones</a>
+          </p>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
-          <a
-            href="/libro-reclamaciones"
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold"
-            style={{ background: "#FFFFFF", border: `1.5px solid ${INK}`, color: INK }}
-          >
-            <BookText size={14} />
-            Libro de Reclamaciones
-          </a>
-        </div>
-        <p className="text-[11px] mt-5" style={{ color: "rgba(36,31,28,0.5)" }}>
-          © 2026 Lobo Burger. Todos los derechos reservados. ·{" "}
-          <a href="/terminos" className="underline">Términos y condiciones</a>
-        </p>
       </footer>
 
       <style>{`
