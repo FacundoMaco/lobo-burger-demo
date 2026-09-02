@@ -95,10 +95,10 @@ el límite de 2 pesos del sistema de texto funcional (label/body/CTA).
 **Uso concreto:**
 - Nombre de producto en fila de `/admin`: `text-sm font-bold` (14px/700) — igual que `o.name` en el tab Pedidos existente (`app/admin/page.tsx:482`).
 - Descripción/detalle de producto: `text-xs` (12px/400), color `#888` — igual que `item.name` dentro de líneas de pedido existentes.
-- Precio (display + input inline): `font-mono text-sm md:text-base font-bold` — mismo patrón `font-mono` ya usado para precios en `app/page.tsx:119` y `app/admin/page.tsx:500`.
+- Precio (display + input inline): `font-mono text-sm font-bold` (14px, mismo tamaño en todos los breakpoints, sin bump a `md:text-base`) — mismo patrón `font-mono` ya usado para precios en `app/page.tsx:119` y `app/admin/page.tsx:500`.
 - Header de categoría en tab "Menú": `text-sm font-bold uppercase` — mismo patrón que `sectionTitle` de `ValidarTab` (`app/admin/page.tsx:134`), no el `font-bebas text-3xl` reservado para el título de página ("MENÚ").
 - Título de página del tab nuevo: `font-bebas text-3xl md:text-4xl tracking-widest` — mismo patrón que "DASHBOARD HOY", "PEDIDOS", "CLIENTES" existentes.
-- Badge "AGOTADO" en carta pública: `text-[10px] font-bold uppercase tracking-wider` — mismo tamaño que `ItemBadge` existente (`app/page.tsx:59`).
+- Badge "AGOTADO" en carta pública: `text-xs font-bold uppercase tracking-wider` (12px, reutiliza el token Label — no `text-[10px]`) — mismo patrón visual que `ItemBadge` existente (`app/page.tsx:59`), ajustado a la escala de 4 tamaños de este contrato.
 
 ---
 
