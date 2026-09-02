@@ -3,10 +3,13 @@
 // El Checkout Custom solo muestra tarjeta cuando `settings.order` viene
 // vacio (ver docs.culqi.com/checkout-custom) — Yape, PagoEfectivo y
 // Cuotealo necesitan una Orden creada de antemano contra POST /v2/orders.
-// El monto se recalcula aca contra lib/menu.ts, con la misma regla que
-// /api/charge: el cliente nunca decide cuanto se cobra.
+// El monto se recalcula contra la tabla menu_items en vivo (getMenuItemLive),
+// con la misma regla que /api/charge: el cliente nunca decide cuanto se cobra.
+//
+// NOTA DE MANTENIMIENTO: Este archivo y app/api/charge/route.ts duplican el
+// cálculo del total a propósito y deben mantenerse en sync a mano.
 
-import { getMenuItem } from "@/lib/menu";
+import { getMenuItemLive } from "@/lib/menu-data";
 
 const MIN_CENTS = 600; // Culqi exige S/6 para Ordenes (mas alto que S/3 para Cargos)
 const MAX_CENTS = 50000; // techo sano para un pedido web
@@ -57,11 +60,14 @@ export async function POST(request: Request) {
     if (linea.qty < 1 || linea.qty > MAX_QTY) {
       return Response.json({ error: "Cantidad no permitida" }, { status: 400 });
     }
-    const item = getMenuItem(linea.id);
+    const item = await getMenuItemLive(linea.id);
     if (!item) {
       return Response.json({ error: "Hay un producto que ya no está disponible" }, { status: 400 });
     }
-    totalCents += Math.round(item.price * 100) * linea.qty;
+    if (item.agotado) {
+      return Response.json({ error: "Un producto de tu pedido ya no está disponible" }, { status: 400 });
+    }
+    totalCents += item.precio_centimos * linea.qty;
   }
 
   if (totalCents < MIN_CENTS || totalCents > MAX_CENTS) {

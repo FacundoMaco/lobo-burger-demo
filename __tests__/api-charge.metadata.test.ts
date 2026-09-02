@@ -12,11 +12,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "./helpers/supabase-mock";
 
+vi.mock("@/lib/menu-data", () => ({
+  getMenuItemLive: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   getSupabaseAdmin: vi.fn(),
 }));
 
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getMenuItemLive } from "@/lib/menu-data";
+import { CATALOGO_TEST } from "./helpers/menu-data-mock";
 import { POST } from "@/app/api/charge/route";
 
 function bodyValido(overrides: Record<string, unknown> = {}) {
@@ -25,7 +31,7 @@ function bodyValido(overrides: Record<string, unknown> = {}) {
     email: "cliente@example.com",
     name: "Juan Perez",
     phone: "999999999",
-    items: [{ id: 1, qty: 1 }],
+    items: [{ id: 1001, qty: 1 }],
     ...overrides,
   };
 }
@@ -46,6 +52,9 @@ function mockCulqiCargoOk(cargo: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
+  vi.mocked(getMenuItemLive).mockClear();
+  vi.mocked(getMenuItemLive).mockImplementation(async (id: number) => CATALOGO_TEST.find((i) => i.id === id));
+
   vi.stubEnv("CULQI_SECRET_KEY", "sk_test_x");
   vi.stubGlobal("fetch", vi.fn());
   const mock = createSupabaseMock({ insertResult: { data: { codigo: "LB-X" }, error: null } });
@@ -65,8 +74,8 @@ describe("POST /api/charge -- metadata para el webhook (opcion C, PAY-02)", () =
       req(
         bodyValido({
           items: [
-            { id: 1, qty: 2 },
-            { id: 10, qty: 1 },
+            { id: 1001, qty: 2 },
+            { id: 1015, qty: 1 },
           ],
         })
       )
@@ -79,8 +88,8 @@ describe("POST /api/charge -- metadata para el webhook (opcion C, PAY-02)", () =
     const pedido = JSON.parse(culqiBody.metadata.pedido);
     expect(pedido).toEqual({
       items: [
-        { id: 1, qty: 2 },
-        { id: 10, qty: 1 },
+        { id: 1001, qty: 2 },
+        { id: 1015, qty: 1 },
       ],
       nombre: "Juan Perez",
       telefono: "999999999",

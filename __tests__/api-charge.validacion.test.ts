@@ -6,11 +6,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "./helpers/supabase-mock";
 
+vi.mock("@/lib/menu-data", () => ({
+  getMenuItemLive: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   getSupabaseAdmin: vi.fn(),
 }));
 
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getMenuItemLive } from "@/lib/menu-data";
+import { CATALOGO_TEST } from "./helpers/menu-data-mock";
 import { POST } from "@/app/api/charge/route";
 
 function bodyValido(overrides: Record<string, unknown> = {}) {
@@ -19,7 +25,7 @@ function bodyValido(overrides: Record<string, unknown> = {}) {
     email: "cliente@example.com",
     name: "Juan Perez",
     phone: "999999999",
-    items: [{ id: 1, qty: 1 }],
+    items: [{ id: 1001, qty: 1 }],
     ...overrides,
   };
 }
@@ -33,6 +39,9 @@ function req(body: unknown): Request {
 }
 
 beforeEach(() => {
+  vi.mocked(getMenuItemLive).mockClear();
+  vi.mocked(getMenuItemLive).mockImplementation(async (id: number) => CATALOGO_TEST.find((i) => i.id === id));
+
   vi.stubEnv("CULQI_SECRET_KEY", "sk_test_x");
   vi.stubGlobal("fetch", vi.fn());
   const mock = createSupabaseMock({ insertResult: { data: { codigo: "LB-DEFAULT" }, error: null } });

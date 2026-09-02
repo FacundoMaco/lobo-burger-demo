@@ -11,11 +11,17 @@ import { createSupabaseMock } from "./helpers/supabase-mock";
 // primer intento, sin tocar produccion. Un rojo aca es un bug preexistente,
 // no algo que se arregla de paso -- ver 01-HALLAZGOS-CARACTERIZACION.md.
 
+vi.mock("@/lib/menu-data", () => ({
+  getMenuItemLive: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   getSupabaseAdmin: vi.fn(),
 }));
 
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getMenuItemLive } from "@/lib/menu-data";
+import { CATALOGO_TEST } from "./helpers/menu-data-mock";
 import { POST } from "@/app/api/charge/route";
 
 function bodyValido(overrides: Record<string, unknown> = {}) {
@@ -24,7 +30,7 @@ function bodyValido(overrides: Record<string, unknown> = {}) {
     email: "cliente@example.com",
     name: "Juan Perez",
     phone: "999999999",
-    items: [{ id: 1, qty: 1 }], // Miami Night, S/18
+    items: [{ id: 1001, qty: 1 }], // Miami Night, S/18
     ...overrides,
   };
 }
@@ -72,6 +78,7 @@ beforeEach(() => {
   // Default: insert exitoso. Los tests de las ramas de conflicto/fallo lo
   // sobreescriben explicitamente.
   useSupabaseMock({ data: { codigo: "LB-DEFAULT" }, error: null });
+  vi.mocked(getMenuItemLive).mockImplementation(async (id: number) => CATALOGO_TEST.find((i) => i.id === id));
 });
 
 afterEach(() => {
@@ -128,14 +135,14 @@ describe("POST /api/charge -- body invalido, antes de tocar Culqi", () => {
 });
 
 describe("POST /api/charge -- recalculo del precio (el corazon de INFRA-04)", () => {
-  it("recalcula el total contra lib/menu.ts: 2 Miami Night + 1 Gaseosa = 4100 centimos", async () => {
+  it("recalcula el total contra lib/menu.ts: 2 Miami Night + 1 Gaseosa = 3980 centimos", async () => {
     mockCulqiCargoOk();
     const res = await POST(
       req(
         bodyValido({
           items: [
-            { id: 1, qty: 2 }, // Miami Night S/18 x2 = 3600
-            { id: 10, qty: 1 }, // Gaseosa S/5 = 500
+            { id: 1001, qty: 2 }, // Miami Night S/18 x2 = 3600
+            { id: 1015, qty: 1 }, // Gaseosa S/5 = 500
           ],
         })
       )
@@ -143,10 +150,10 @@ describe("POST /api/charge -- recalculo del precio (el corazon de INFRA-04)", ()
     expect(res.status).toBe(200);
     const [, fetchOptions] = vi.mocked(fetch).mock.calls[0];
     const culqiBody = JSON.parse(String(fetchOptions?.body));
-    expect(culqiBody.amount).toBe(4100);
+    expect(culqiBody.amount).toBe(3980);
   });
 
-  it("ANTIREGRESION -- ignora un amount/total enviado por el cliente y sigue cobrando 4100", async () => {
+  it("ANTIREGRESION -- ignora un amount/total enviado por el cliente y sigue cobrando 3980", async () => {
     // Este es el test que debe romperse si alguien vuelve a confiar en el
     // precio que manda el navegador (el exploit de pagar S/3 un pedido de
     // S/38, arreglado el 2026-08-20). Si este test pasa con el codigo
@@ -156,8 +163,8 @@ describe("POST /api/charge -- recalculo del precio (el corazon de INFRA-04)", ()
       req(
         bodyValido({
           items: [
-            { id: 1, qty: 2 },
-            { id: 10, qty: 1 },
+            { id: 1001, qty: 2 },
+            { id: 1015, qty: 1 },
           ],
           amount: 300, // 3 soles -- intento de manipular el monto
           total: 3,
@@ -167,7 +174,7 @@ describe("POST /api/charge -- recalculo del precio (el corazon de INFRA-04)", ()
     expect(res.status).toBe(200);
     const [, fetchOptions] = vi.mocked(fetch).mock.calls[0];
     const culqiBody = JSON.parse(String(fetchOptions?.body));
-    expect(culqiBody.amount).toBe(4100);
+    expect(culqiBody.amount).toBe(3980);
   });
 
   it("envia currency_code PEN y source_id igual al tokenId recibido", async () => {
@@ -196,7 +203,7 @@ describe("POST /api/charge -- bounds", () => {
   });
 
   it("responde 400 si el total supera MAX_CENTS (Combo Bestia x20 = 76000 centimos), sin llamar a Culqi", async () => {
-    const res = await POST(req(bodyValido({ items: [{ id: 14, qty: 20 }] })));
+    const res = await POST(req(bodyValido({ items: [{ id: 1030, qty: 20 }, { id: 1029, qty: 20 }] })));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "El monto del pedido no es válido" });
     expect(fetch).not.toHaveBeenCalled();
@@ -207,7 +214,7 @@ describe("POST /api/charge -- bounds", () => {
   // finja cubrir esta rama -- ver 01-HALLAZGOS-CARACTERIZACION.md.
 
   it("responde 400 si el id del producto no existe (999)", async () => {
-    const res = await POST(req(bodyValido({ items: [{ id: 999, qty: 1 }] })));
+    const res = await POST(req(bodyValido({ items: [{ id: 9999, qty: 1 }] })));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "Hay un producto que ya no está disponible" });
     expect(fetch).not.toHaveBeenCalled();
@@ -249,6 +256,7 @@ describe("POST /api/charge -- cargo rechazado por Culqi", () => {
   it("responde 402 con el mensaje de Culqi y no persiste el pedido en Supabase", async () => {
     mockCulqiRechazado("Tarjeta rechazada");
     const mock = useSupabaseMock({ data: { codigo: "LB-DEFAULT" }, error: null });
+  vi.mocked(getMenuItemLive).mockImplementation(async (id: number) => CATALOGO_TEST.find((i) => i.id === id));
     const res = await POST(req(bodyValido()));
     expect(res.status).toBe(402);
     expect(await res.json()).toEqual({ error: "Tarjeta rechazada" });
@@ -265,14 +273,14 @@ describe("POST /api/charge -- persistencia", () => {
       req(
         bodyValido({
           items: [
-            { id: 1, qty: 2 },
-            { id: 10, qty: 1 },
+            { id: 1001, qty: 2 },
+            { id: 1015, qty: 1 },
           ],
         })
       )
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ chargeId: "chr_feliz_1", codigo: "LB-X", total: 41 });
+    expect(await res.json()).toEqual({ chargeId: "chr_feliz_1", codigo: "LB-X", total: 39.8 });
   });
 
   it("idempotencia 23505: devuelve el codigo del pedido ya existente consultando por culqi_charge_id", async () => {
@@ -283,7 +291,7 @@ describe("POST /api/charge -- persistencia", () => {
     );
     const res = await POST(req(bodyValido()));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ chargeId: "chr_dup_1", codigo: "LB-PREVIO", total: 18 });
+    expect(await res.json()).toEqual({ chargeId: "chr_dup_1", codigo: "LB-PREVIO", total: 17.9 });
     expect(mock.calls.selectEqArgs[0]).toEqual({ column: "culqi_charge_id", value: "chr_dup_1" });
   });
 

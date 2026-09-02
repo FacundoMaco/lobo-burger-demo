@@ -75,11 +75,12 @@ export const getMenuItemsCached = unstable_cache(
  */
 export async function getMenuItemLive(
   id: number
-): Promise<{ id: number; precio_centimos: number; agotado: boolean } | undefined> {
+): Promise<{ id: number; name: string; precio_centimos: number; agotado: boolean } | undefined> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("menu_items")
-    .select("id, precio_centimos, agotado")
+    // /api/charge guarda detalle (id, name, price, qty) en pedidos.items y ese nombre es lo que ve la cocina y el panel
+    .select("id, name, precio_centimos, agotado")
     .eq("id", id)
     .single();
 
@@ -89,6 +90,7 @@ export async function getMenuItemLive(
 
   return {
     id: data.id,
+    name: data.name,
     precio_centimos: data.precio_centimos,
     agotado: Boolean(data.agotado),
   };

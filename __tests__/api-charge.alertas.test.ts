@@ -8,6 +8,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "./helpers/supabase-mock";
 
+vi.mock("@/lib/menu-data", () => ({
+  getMenuItemLive: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   getSupabaseAdmin: vi.fn(),
 }));
@@ -17,6 +21,8 @@ vi.mock("@/lib/alertas", () => ({
 }));
 
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getMenuItemLive } from "@/lib/menu-data";
+import { CATALOGO_TEST } from "./helpers/menu-data-mock";
 import { alertaTelegram } from "@/lib/alertas";
 import { POST } from "@/app/api/charge/route";
 
@@ -26,7 +32,7 @@ function bodyValido(overrides: Record<string, unknown> = {}) {
     email: "cliente@example.com",
     name: "Juan Perez",
     phone: "999999999",
-    items: [{ id: 1, qty: 1 }], // Miami Night, S/18
+    items: [{ id: 1001, qty: 1 }], // Miami Night, S/18
     ...overrides,
   };
 }
@@ -61,6 +67,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
   vi.mocked(alertaTelegram).mockClear();
   useSupabaseMock({ data: { codigo: "LB-DEFAULT" }, error: null });
+  vi.mocked(getMenuItemLive).mockImplementation(async (id: number) => CATALOGO_TEST.find((i) => i.id === id));
 });
 
 afterEach(() => {

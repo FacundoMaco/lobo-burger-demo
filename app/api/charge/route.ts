@@ -5,7 +5,9 @@
 // venia del cliente y se podia pagar S/3 un pedido de S/38.
 
 import * as Sentry from "@sentry/nextjs";
-import { getMenuItem } from "@/lib/menu";
+// NOTA DE MANTENIMIENTO: Este archivo y app/api/culqi/order/route.ts duplican el
+// cálculo del total a propósito y deben mantenerse en sync a mano.
+import { getMenuItemLive } from "@/lib/menu-data";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { alertaTelegram } from "@/lib/alertas";
 import { validarEmail, validarTelefono } from "@/lib/validacion";
@@ -94,7 +96,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // ── Total calculado en el servidor ──
+  // ── Total calculado en el servidor (leído en vivo de Postgres sin caché) ──
   let totalCents = 0;
   const detalle: { id: number; name: string; price: number; qty: number }[] = [];
   for (const linea of items) {
@@ -104,12 +106,15 @@ export async function POST(request: Request) {
     if (linea.qty < 1 || linea.qty > MAX_QTY) {
       return Response.json({ error: "Cantidad no permitida" }, { status: 400 });
     }
-    const item = getMenuItem(linea.id);
+    const item = await getMenuItemLive(linea.id);
     if (!item) {
       return Response.json({ error: "Hay un producto que ya no está disponible" }, { status: 400 });
     }
-    totalCents += Math.round(item.price * 100) * linea.qty;
-    detalle.push({ id: item.id, name: item.name, price: item.price, qty: linea.qty });
+    if (item.agotado) {
+      return Response.json({ error: "Un producto de tu pedido ya no está disponible" }, { status: 400 });
+    }
+    totalCents += item.precio_centimos * linea.qty;
+    detalle.push({ id: item.id, name: item.name, price: item.precio_centimos / 100, qty: linea.qty });
   }
 
   if (totalCents < MIN_CENTS || totalCents > MAX_CENTS) {
