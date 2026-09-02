@@ -1,7 +1,7 @@
-import { formatPrice } from "@/lib/utils";
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { formatPrice } from "@/lib/utils";
 import { construirOrderLocal } from "@/lib/orders-store";
 import type { Order } from "@/lib/orders-store";
 
