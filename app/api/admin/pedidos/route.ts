@@ -6,6 +6,10 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 
 const ESTADOS = ["pendiente", "en_preparacion", "listo", "entregado", "cancelado"];
 
+// Almacén en memoria de pedidos simulados para que no se borren si Supabase está offline
+const simulatedOrdersStore: Record<string, any>[] = [];
+
+
 export async function GET() {
   try {
     const { data, error } = await getSupabaseAdmin()
@@ -14,11 +18,13 @@ export async function GET() {
       .order("created_at", { ascending: false })
       .limit(200);
 
-    if (error) throw error;
-    return Response.json({ pedidos: data ?? [] });
+    const dbOrders = data ?? [];
+    const dbCodes = new Set(dbOrders.map((d: any) => d.codigo));
+    const activeSimulated = simulatedOrdersStore.filter(s => !dbCodes.has(s.codigo));
+    return Response.json({ pedidos: [...activeSimulated, ...dbOrders] });
   } catch (e) {
-    console.error("No se pudieron leer los pedidos:", e);
-    return Response.json({ error: "No se pudieron leer los pedidos" }, { status: 500 });
+    console.warn("Supabase offline, devolviendo pedidos en memoria:", e);
+    return Response.json({ pedidos: simulatedOrdersStore });
   }
 }
 
@@ -92,11 +98,16 @@ export async function POST(request: Request) {
       .select()
       .single();
 
+    simulatedOrdersStore.unshift(simPedido);
+    if (simulatedOrdersStore.length > 30) simulatedOrdersStore.pop();
+
     if (!error && data) {
       return Response.json({ ok: true, pedido: data });
     }
   } catch (e) {
     console.warn("Supabase no disponible para pedido simulado:", e);
+    simulatedOrdersStore.unshift(simPedido);
+    if (simulatedOrdersStore.length > 30) simulatedOrdersStore.pop();
   }
 
   return Response.json({ ok: true, pedido: simPedido });

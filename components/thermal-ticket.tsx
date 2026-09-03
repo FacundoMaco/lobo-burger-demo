@@ -11,40 +11,45 @@ interface ThermalTicketModalProps {
 }
 
 export function formatTicketText(o: Order): string {
-  const dateStr = new Date(o.createdAt).toLocaleString("es-PE", {
-    dateStyle: "short",
-    timeStyle: "medium",
-  });
-  const canal = o.delivery ? "*** DELIVERY A DOMICILIO ***" : "*** RECOJO EN TIENDA ***";
+  const dateObj = new Date(o.createdAt);
+  const timeStr = dateObj.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const dateStr = dateObj.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" });
+  const canal = o.delivery ? "DELIVERY" : "RECOJO";
+
+  // Formato compacto de 32 columnas (compatible con rollos de 58mm y 80mm sin desbordar)
   const itemsText = o.items
-    .map(it => `${it.qty}x ${it.name.padEnd(24).slice(0, 24)} ${formatPrice(it.price * it.qty).padStart(9)}`)
+    .map(it => {
+      const name = it.name.length > 17 ? it.name.slice(0, 16) + "." : it.name.padEnd(17);
+      const subtotal = formatPrice(it.price * it.qty).padStart(8);
+      return `${it.qty}x ${name} ${subtotal}`;
+    })
     .join("\n");
 
-  return `==========================================
-               LOBO BURGER
-  Hamburguesas & Salchipapas Artesanales
-     Surquillo & San Juan de Miraflores
-==========================================
-COMANDA:  #${o.id}
-FECHA:    ${dateStr}
-CANAL:    ${canal}
-==========================================
-CANT  DESCRIPCION                    TOTAL
-------------------------------------------
-${itemsText}
-------------------------------------------
-TOTAL:                         ${formatPrice(o.total).padStart(11)}
-==========================================
-ESTADO:   ${o.culqiChargeId ? "PAGADO (Culqi / Yape)" : "PAGADO"}
-------------------------------------------
-DATOS DE ENTREGA:
-CLIENTE:   ${o.name}
-TELEFONO:  ${o.phone}
-${o.delivery ? `DIRECCION: ${o.address}` : "MODALIDAD: RECOJO EN LOCAL"}
-==========================================
-           www.loboburger.com
-    ¡Gracias por elegir Lobo Burger!
-------------------------------------------`;
+  const lines = [
+    "--------------------------------",
+    "          LOBO BURGER           ",
+    "--------------------------------",
+    `COMANDA: #${o.id}`,
+    `FECHA:   ${dateStr}  ${timeStr}`,
+    `CANAL:   ${canal}`,
+    "--------------------------------",
+    "CANT PRODUCTO            SUBTOTAL",
+    "--------------------------------",
+    itemsText,
+    "--------------------------------",
+    `TOTAL:                 ${formatPrice(o.total).padStart(9)}`,
+    "--------------------------------",
+    `CLIENTE: ${o.name}`,
+    `TEL:     ${o.phone}`,
+  ];
+
+  if (o.delivery && o.address) {
+    lines.push(`DIR:     ${o.address}`);
+  }
+
+  lines.push("--------------------------------\n");
+
+  return lines.join("\n");
 }
 
 // Componente invisible en pantalla que se activa únicamente al imprimir (@media print)

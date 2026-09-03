@@ -2,7 +2,7 @@ import "server-only";
 
 import { unstable_cache, revalidateTag } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import type { MenuItem } from "@/lib/menu";
+import { MENU_ITEMS, type MenuItem } from "@/lib/menu";
 
 // Orden canonico de las categorias reales de la tabla `menu_items`, consumido
 // por los route handlers cuando el plan 02-02 los migre.
@@ -76,24 +76,38 @@ export const getMenuItemsCached = unstable_cache(
 export async function getMenuItemLive(
   id: number
 ): Promise<{ id: number; name: string; precio_centimos: number; agotado: boolean } | undefined> {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("menu_items")
-    // /api/charge guarda detalle (id, name, price, qty) en pedidos.items y ese nombre es lo que ve la cocina y el panel
-    .select("id, name, precio_centimos, agotado")
-    .eq("id", id)
-    .single();
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("menu_items")
+      .select("id, name, precio_centimos, agotado")
+      .eq("id", id)
+      .single();
 
-  if (error || !data) {
-    return undefined;
+    if (!error && data) {
+      return {
+        id: data.id,
+        name: data.name,
+        precio_centimos: data.precio_centimos,
+        agotado: Boolean(data.agotado),
+      };
+    }
+  } catch {
+    // Supabase no disponible o tabla vacia
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    precio_centimos: data.precio_centimos,
-    agotado: Boolean(data.agotado),
-  };
+  // Fallback defensivo a MENU_ITEMS (soporta los IDs 1..17 del catalogo actual)
+  const local = MENU_ITEMS.find((m) => m.id === id);
+  if (local) {
+    return {
+      id: local.id,
+      name: local.name,
+      precio_centimos: Math.round(local.price * 100),
+      agotado: Boolean(local.agotado),
+    };
+  }
+
+  return undefined;
 }
 
 /**

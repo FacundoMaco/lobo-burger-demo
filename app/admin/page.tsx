@@ -466,6 +466,14 @@ export default function AdminPage() {
         status: p.estado as OrderStatus,
       }));
 
+      // Preservar pedidos simulados en local para que no desaparezcan al refrescar
+      setOrders(prev => {
+        const localSim = prev.filter(o => o.name.includes("Simulación") || o.id.startsWith("LB-SIM"));
+        const apiIds = new Set(mapped.map(m => m.id));
+        const remainingLocal = localSim.filter(l => !apiIds.has(l.id));
+        return [...remainingLocal, ...mapped];
+      });
+
       const pendingOrders = mapped.filter(o => o.status === "pendiente");
       const newPending = pendingOrders.length;
 

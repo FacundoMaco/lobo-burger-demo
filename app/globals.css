@@ -234,7 +234,7 @@
 .border-yellow-lobo { border-color: #FFD600; }
 
 
-/* Reglas de impresión para ticketera térmica de 80mm */
+/* Reglas de impresión para ticketera térmica (58mm / 80mm) */
 #thermal-print-area {
   display: none;
 }
@@ -250,18 +250,19 @@
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
-    width: 80mm !important;
-    max-width: 80mm !important;
+    width: 100% !important;
+    max-width: 72mm !important;
     margin: 0 !important;
-    padding: 3mm !important;
+    padding: 1mm 2mm !important;
     font-family: 'Courier New', Courier, monospace !important;
-    font-size: 11px !important;
-    line-height: 1.25 !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
     color: #000000 !important;
     background: #ffffff !important;
   }
   @page {
-    size: 80mm auto;
+    size: auto;
     margin: 0;
   }
 }
