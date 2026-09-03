@@ -5,10 +5,11 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCart, buildWhatsAppUrl } from "@/lib/cart-context";
 import { initCulqiCheckout } from "@/lib/culqi";
+import { createYapeToken } from "@/lib/culqi-yape";
 import { Navbar } from "@/components/navbar";
 import type { Ubicacion } from "@/components/delivery-map";
 import type { Order } from "@/lib/orders-store";
-import { CreditCard, Check, Store, Bike, MessageCircle, ShoppingBag } from "lucide-react";
+import { CreditCard, Check, Store, Bike, MessageCircle, ShoppingBag, Smartphone, Info } from "lucide-react";
 
 // Leaflet toca window al importarse, asi que el mapa solo se carga en el cliente.
 const DeliveryMap = dynamic(
@@ -48,8 +49,13 @@ export default function CheckoutPage() {
   const [paying, setPaying] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"yape" | "tarjeta">("yape");
+  const [yapePhone, setYapePhone] = useState("");
+  const [yapePhoneTouched, setYapePhoneTouched] = useState(false);
+  const [yapeOtp, setYapeOtp] = useState("");
 
-  const handlePay = async () => {
+  // Validador compartido de datos de despacho
+  const validateForm = (): boolean => {
     const errs: typeof errors = {};
     if (!name.trim()) errs.name = "Ingresa tu nombre";
     if (!phone.trim()) errs.phone = "Ingresa tu teléfono";
@@ -60,7 +66,110 @@ export default function CheckoutPage() {
       errs.ubicacion = "Esa dirección está fuera de nuestra zona de reparto";
     }
     if (!termsAccepted) errs.terms = "Debes aceptar los términos y condiciones";
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return false;
+    }
+    return true;
+  };
+
+  // Pago nativo directo con Yape (sin correos de PagoEfectivo)
+  const handlePayYape = async () => {
+    if (!validateForm()) return;
+
+    const cleanPhone = (yapePhone.trim() || phone.trim()).replace(/\D/g, "");
+    const cleanOtp = yapeOtp.trim().replace(/\D/g, "");
+
+    if (cleanPhone.length !== 9) {
+      setPayError("El número de celular de Yape debe tener 9 dígitos");
+      return;
+    }
+    if (cleanOtp.length !== 6) {
+      setPayError("Ingresa el código de aprobación de 6 dígitos generado en tu app Yape");
+      return;
+    }
+
+    setPayError(null);
+    setPaying(true);
+
+    // 1. Cotizar en vivo contra Postgres (MENU-04): garantiza que el monto del token
+    // Yape coincida exactamente con el monto del cargo exigido por Culqi, y valida
+    // disponibilidad sin quemar el OTP del cliente si un precio cambió o se agotó.
+    let serverAmountCents = Math.round(total * 100);
+    try {
+      const quoteRes = await fetch("/api/cotizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items.map(i => ({ id: i.id, qty: i.qty })) }),
+      });
+      const quoteData = await quoteRes.json();
+      if (!quoteRes.ok) {
+        setPayError(quoteData.error || "No pudimos validar la disponibilidad de tu pedido");
+        setPaying(false);
+        return;
+      }
+      serverAmountCents = quoteData.totalCents;
+    } catch {
+      setPayError("Error de conexión al verificar el pedido. Intenta de nuevo.");
+      setPaying(false);
+      return;
+    }
+
+    // 2. Generar token Yape directo en Culqi con el monto validado del servidor
+    const tokenRes = await createYapeToken({
+      phone: cleanPhone,
+      otp: cleanOtp,
+      amountCents: serverAmountCents,
+    });
+
+    if (!tokenRes.success) {
+      setPayError(tokenRes.error);
+      setPaying(false);
+      return;
+    }
+
+    // 3. Cobrar contra el servidor (/api/charge)
+    try {
+      const res = await fetch("/api/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tokenId: tokenRes.tokenId,
+          email: email.trim(),
+          items: items.map(i => ({ id: i.id, qty: i.qty })),
+          name: name.trim(),
+          phone: phone.trim(),
+          delivery: fulfillmentMode === "delivery",
+          address: direccionCompleta(),
+          lat: ubicacion?.lat,
+          lng: ubicacion?.lng,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        const order = submitOrder({
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          culqiChargeId: data.chargeId,
+          delivery: fulfillmentMode === "delivery",
+          address: direccionCompleta(),
+        });
+        setConfirmedOrder({ ...order, id: data.codigo });
+      } else {
+        setPayError(data.error || "No pudimos procesar el cobro. Intenta de nuevo.");
+      }
+    } catch {
+      setPayError("Error de conexión al procesar el pago. Intenta de nuevo.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // Pago con tarjeta vía Culqi Checkout (sin orden previa / solo tarjeta)
+  const handlePayCard = async () => {
+    if (!validateForm()) return;
 
     setPayError(null);
     setPaying(true);
@@ -70,8 +179,8 @@ export default function CheckoutPage() {
       amount: total,
       email: email.trim(),
       containerId: CULQI_CONTAINER_ID,
+      allowYape: false, // Solo tarjeta: no genera orden ni correos de PagoEfectivo
       pedido: {
-        // Solo ids y cantidades: el precio lo pone el servidor.
         items: items.map(i => ({ id: i.id, qty: i.qty })),
         name: name.trim(),
         phone: phone.trim(),
@@ -284,7 +393,14 @@ export default function CheckoutPage() {
                 type="tel"
                 inputMode="numeric"
                 value={phone}
-                onChange={e => { setPhone(e.target.value); setErrors(p => ({ ...p, phone: undefined })); }}
+                onChange={e => {
+                  const val = e.target.value;
+                  setPhone(val);
+                  setErrors(p => ({ ...p, phone: undefined }));
+                  if (!yapePhoneTouched) {
+                    setYapePhone(val.replace(/\D/g, ""));
+                  }
+                }}
                 placeholder="Ej: 999 888 777"
                 autoComplete="tel"
                 className={inputCls}
@@ -316,6 +432,120 @@ export default function CheckoutPage() {
 
         <div className="md:sticky md:top-24">
 
+        {/* Selector de Método de Pago */}
+        <div className="rounded-2xl p-5 mb-5" style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,28,0.1)" }}>
+          <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "rgba(36,31,28,0.5)" }}>
+            Método de pago
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {/* Opción Yape */}
+            <button
+              type="button"
+              onClick={() => {
+                setPaymentMethod("yape");
+                setShowPayment(false);
+                setPayError(null);
+                if (!yapePhone && !yapePhoneTouched && phone) {
+                  setYapePhone(phone.replace(/\D/g, ""));
+                }
+              }}
+              className="flex flex-col items-center justify-center p-3.5 rounded-xl border transition-all cursor-pointer relative"
+              style={{
+                background: paymentMethod === "yape" ? "rgba(116, 34, 132, 0.07)" : "#FFFDF8",
+                borderColor: paymentMethod === "yape" ? "#742284" : "rgba(36,31,28,0.15)",
+              }}
+            >
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 absolute top-2 right-2">
+                RÁPIDO
+              </span>
+              <Smartphone size={22} className={paymentMethod === "yape" ? "text-purple-700 mb-1" : "text-neutral-500 mb-1"} />
+              <span className="text-xs font-black tracking-wider" style={{ color: paymentMethod === "yape" ? "#742284" : INK }}>
+                YAPE
+              </span>
+              <span className="text-[10px] text-neutral-500 font-medium">Con código de aprobación</span>
+            </button>
+
+            {/* Opción Tarjeta */}
+            <button
+              type="button"
+              onClick={() => {
+                setPaymentMethod("tarjeta");
+                setPayError(null);
+              }}
+              className="flex flex-col items-center justify-center p-3.5 rounded-xl border transition-all cursor-pointer relative"
+              style={{
+                background: paymentMethod === "tarjeta" ? "rgba(245, 166, 35, 0.08)" : "#FFFDF8",
+                borderColor: paymentMethod === "tarjeta" ? PRIMARY : "rgba(36,31,28,0.15)",
+              }}
+            >
+              <CreditCard size={22} className={paymentMethod === "tarjeta" ? "text-yellow-600 mb-1" : "text-neutral-500 mb-1"} />
+              <span className="text-xs font-bold tracking-wider" style={{ color: paymentMethod === "tarjeta" ? INK : INK }}>
+                TARJETA
+              </span>
+              <span className="text-[10px] text-neutral-500 font-medium">Débito o Crédito</span>
+            </button>
+          </div>
+
+          {/* Formulario Nativo de Yape */}
+          {paymentMethod === "yape" && (
+            <div className="space-y-3 pt-3 border-t border-dashed border-neutral-200 animate-fadeIn">
+              <div>
+                <label htmlFor="yape-phone" className="text-xs font-semibold uppercase tracking-wider block mb-1 text-neutral-600">
+                  Celular de tu cuenta Yape
+                </label>
+                <input
+                  id="yape-phone"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={9}
+                  value={yapePhone}
+                  onChange={e => {
+                    setYapePhoneTouched(true);
+                    setYapePhone(e.target.value.replace(/\D/g, ""));
+                  }}
+                  placeholder="Ej: 987654321"
+                  className={inputCls}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-baseline mb-1">
+                  <label htmlFor="yape-otp" className="text-xs font-semibold uppercase tracking-wider block text-neutral-600">
+                    Código de aprobación Yape
+                  </label>
+                  <span className="text-[10px] text-purple-700 font-bold">Vigente por 2 min</span>
+                </div>
+                <input
+                  id="yape-otp"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={yapeOtp}
+                  onChange={e => setYapeOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000"
+                  className="w-full text-center text-2xl tracking-[8px] font-black font-mono py-2.5 rounded-lg outline-none border focus-visible:ring-2"
+                  style={{
+                    ...inputStyle,
+                    borderColor: yapeOtp.length === 6 ? "#742284" : "rgba(36,31,28,0.25)",
+                    color: "#742284",
+                  }}
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-purple-50 border border-purple-100 text-[11px] text-purple-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5 text-purple-950">
+                  <Info size={13} /> ¿Dónde encuentro mi código de aprobación?
+                </p>
+                <p className="text-purple-800 leading-tight">
+                  Abre tu app <strong>Yape</strong> &rarr; toca el menú (tres líneas) &rarr; presiona <strong>Código de aprobación</strong>. Ingresa los 6 dígitos aquí.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
         <label className="flex items-start gap-2.5 mb-4 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -345,13 +575,20 @@ export default function CheckoutPage() {
 
         {!showPayment && (
           <button
-            onClick={handlePay}
+            onClick={paymentMethod === "yape" ? handlePayYape : handlePayCard}
             disabled={paying}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all hover:brightness-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
-            style={{ background: PRIMARY, color: INK }}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all hover:brightness-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:pointer-events-none shadow-md"
+            style={{
+              background: paymentMethod === "yape" ? "#742284" : PRIMARY,
+              color: paymentMethod === "yape" ? "#FFFFFF" : INK,
+            }}
           >
-            <CreditCard size={17} />
-            {paying ? "Cargando pago..." : `Pagar S/${total}`}
+            {paymentMethod === "yape" ? <Smartphone size={18} /> : <CreditCard size={18} />}
+            {paying
+              ? "Procesando pago..."
+              : paymentMethod === "yape"
+              ? `Yapear S/${total}`
+              : `Pagar S/${total} con Tarjeta`}
           </button>
         )}
 

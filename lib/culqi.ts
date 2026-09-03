@@ -130,6 +130,7 @@ export type CulqiCheckoutParams = {
   email: string;
   pedido: DatosPedido;
   containerId?: string; // si se pasa, el formulario se embebe ahi en vez de abrir un modal
+  allowYape?: boolean; // si es false, evita crear orden previa y omite correos de PagoEfectivo
 };
 
 export type CulqiCheckoutResult =
@@ -141,6 +142,7 @@ export async function initCulqiCheckout({
   email,
   pedido,
   containerId,
+  allowYape = false,
 }: CulqiCheckoutParams): Promise<CulqiCheckoutResult> {
   await loadCulqiScript();
 
@@ -153,24 +155,26 @@ export async function initCulqiCheckout({
   // a pago solo con tarjeta en vez de bloquear el pago entero.
   let orderId: string | undefined;
   let amountCents = Math.round(amount * 100);
-  try {
-    const orderRes = await fetch("/api/culqi/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: pedido.items,
-        name: pedido.name,
-        phone: pedido.phone,
-        email,
-      }),
-    });
-    const orderData = await orderRes.json();
-    if (orderRes.ok) {
-      orderId = orderData.orderId;
-      amountCents = orderData.amount;
+  if (allowYape) {
+    try {
+      const orderRes = await fetch("/api/culqi/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: pedido.items,
+          name: pedido.name,
+          phone: pedido.phone,
+          email,
+        }),
+      });
+      const orderData = await orderRes.json();
+      if (orderRes.ok) {
+        orderId = orderData.orderId;
+        amountCents = orderData.amount;
+      }
+    } catch {
+      // Sigue sin orden: el pago con tarjeta se mantiene disponible.
     }
-  } catch {
-    // Sigue sin orden: el pago con tarjeta se mantiene disponible.
   }
 
   const config = {
@@ -191,7 +195,7 @@ export async function initCulqiCheckout({
       ...(embedded ? { container: `#${containerId}` } : {}),
       paymentMethods: {
         tarjeta: true,
-        yape: true,
+        yape: Boolean(allowYape && orderId),
         billetera: false,
         bancaMovil: false,
         agente: false,
