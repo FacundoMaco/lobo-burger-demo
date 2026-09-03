@@ -63,13 +63,13 @@ export const metadata: Metadata = {
     siteName: "Lobo Burger",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: [{ url: "/images/og-lobo-burger.png", width: 862, height: 485, alt: "Lobo Burger — Salvaje de Sabor" }],
+    images: [{ url: "https://loboburger.com/images/og-lobo-burger.png", width: 862, height: 485, alt: "Lobo Burger — Salvaje de Sabor" }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ["/images/og-lobo-burger.png"],
+    images: ["https://loboburger.com/images/og-lobo-burger.png"],
   },
   robots: {
     index: true,
