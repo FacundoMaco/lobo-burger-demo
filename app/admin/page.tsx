@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
-import { ThermalTicketModal, PrinterHelpModal } from "@/components/thermal-ticket";
+import { ThermalTicketModal, ThermalPrintArea, PrinterHelpModal } from "@/components/thermal-ticket";
 import {
   LayoutDashboard,
   ExternalLink,
@@ -349,6 +349,15 @@ export default function AdminPage() {
   useEffect(() => {
     autoPrintRef.current = autoPrint;
   }, [autoPrint]);
+
+  // Limpieza automática tras la impresión para no bloquear la pantalla del cocinero
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      setPrintingOrder(null);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => window.removeEventListener("afterprint", handleAfterPrint);
+  }, []);
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const initialLoadRef = useRef(true);
 
@@ -1214,6 +1223,9 @@ export default function AdminPage() {
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+
+      {/* Área física de impresión térmica 80mm */}
+      <ThermalPrintArea order={printingOrder} />
 
       {/* Modal de Comanda Térmica 80mm */}
       <ThermalTicketModal

@@ -47,6 +47,18 @@ ${o.delivery ? `DIRECCION: ${o.address}` : "MODALIDAD: RECOJO EN LOCAL"}
 ------------------------------------------`;
 }
 
+// Componente invisible en pantalla que se activa únicamente al imprimir (@media print)
+export function ThermalPrintArea({ order }: { order: Order | null }) {
+  if (!order) return null;
+  return (
+    <div id="thermal-print-area">
+      <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "'Courier New', Courier, monospace" }}>
+        {formatTicketText(order)}
+      </pre>
+    </div>
+  );
+}
+
 export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) {
   const [copied, setCopied] = useState(false);
 
@@ -210,13 +222,6 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
             <span>Imprimir en Ticketera (80mm)</span>
           </button>
         </div>
-      </div>
-
-      {/* ÁREA DE IMPRESIÓN OCULTA (@media print) */}
-      <div id="thermal-print-area" className="hidden print:block">
-        <pre className="font-mono text-black text-[12px] leading-tight m-0 whitespace-pre">
-          {formatTicketText(order)}
-        </pre>
       </div>
     </div>
   );
