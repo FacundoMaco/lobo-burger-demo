@@ -63,13 +63,13 @@ export const metadata: Metadata = {
     siteName: "Lobo Burger",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: [{ url: "/videos/local-vargas-machuca-poster.jpg", width: 848, height: 478, alt: "Local Lobo Burger" }],
+    images: [{ url: "/images/og-lobo-burger.png", width: 862, height: 485, alt: "Lobo Burger — Salvaje de Sabor" }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ["/videos/local-vargas-machuca-poster.jpg"],
+    images: ["/images/og-lobo-burger.png"],
   },
   robots: {
     index: true,
@@ -86,7 +86,7 @@ const restaurantJsonLd = {
   priceRange: "S/10 - S/40",
   url: SITE_URL,
   telephone: "+51974983862",
-  image: `${SITE_URL}/videos/local-vargas-machuca-poster.jpg`,
+  image: `${SITE_URL}/images/og-lobo-burger.png`,
   location: [
     {
       "@type": "Place",

@@ -10,13 +10,13 @@ interface ThermalTicketModalProps {
   onClose: () => void;
 }
 
+// Formato de texto plano (para botón "Copiar texto" a WhatsApp)
 export function formatTicketText(o: Order): string {
   const dateObj = new Date(o.createdAt);
   const timeStr = dateObj.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
   const dateStr = dateObj.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" });
   const canal = o.delivery ? "DELIVERY" : "RECOJO";
 
-  // Formato compacto de 32 columnas (compatible con rollos de 58mm y 80mm sin desbordar)
   const itemsText = o.items
     .map(it => {
       const name = it.name.length > 17 ? it.name.slice(0, 16) + "." : it.name.padEnd(17);
@@ -52,18 +52,104 @@ export function formatTicketText(o: Order): string {
   return lines.join("\n");
 }
 
-// Componente invisible en pantalla que se activa únicamente al imprimir (@media print)
+// Componente de impresión física para ticketera térmica de 80mm
+// Ocupa el ancho completo (76mm útiles), tipografía sans-serif gruesa de alto contraste
+// que quema nítido en el cabezal térmico sin verse borroso ni encogerse.
 export function ThermalPrintArea({ order }: { order: Order | null }) {
   if (!order) return null;
+
+  const dateObj = new Date(order.createdAt);
+  const timeStr = dateObj.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const dateStr = dateObj.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const canal = order.delivery ? "DELIVERY A DOMICILIO" : "RECOJO EN TIENDA";
+
   return (
     <div id="thermal-print-area">
-      <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "'Courier New', Courier, monospace" }}>
-        {formatTicketText(order)}
-      </pre>
+      {/* Encabezado */}
+      <div style={{ textAlign: "center", borderBottom: "3px solid #000", paddingBottom: "6px", marginBottom: "8px" }}>
+        <div style={{ fontSize: "24px", fontWeight: "900", letterSpacing: "1px", margin: "0 0 2px 0", textTransform: "uppercase" }}>
+          LOBO BURGER
+        </div>
+        <div style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          Surquillo & San Juan de Miraflores
+        </div>
+      </div>
+
+      {/* Recuadro Destacado de Comanda para Cocina */}
+      <div style={{ border: "3px solid #000", padding: "6px 4px", textAlign: "center", margin: "6px 0" }}>
+        <div style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px" }}>
+          NÚMERO DE COMANDA
+        </div>
+        <div style={{ fontSize: "32px", fontWeight: "900", lineHeight: "1.1", margin: "2px 0" }}>
+          #{order.id}
+        </div>
+        <div style={{ fontSize: "13px", fontWeight: "900", marginTop: "2px", textTransform: "uppercase" }}>
+          *** {canal} ***
+        </div>
+      </div>
+
+      {/* Fecha y hora */}
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: "800", borderBottom: "2px dashed #000", paddingBottom: "4px", marginBottom: "6px" }}>
+        <span>FECHA: {dateStr}</span>
+        <span>HORA: {timeStr}</span>
+      </div>
+
+      {/* Detalle de Productos */}
+      <div style={{ marginBottom: "6px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "900", borderBottom: "1px solid #000", paddingBottom: "3px", marginBottom: "5px" }}>
+          <span>CANT / DESCRIPCIÓN</span>
+          <span>SUBTOTAL</span>
+        </div>
+        {order.items.map((it, idx) => (
+          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "15px", fontWeight: "800", marginBottom: "5px", lineHeight: "1.2" }}>
+            <span style={{ paddingRight: "6px" }}>
+              <strong>{it.qty}x</strong> {it.name}
+            </span>
+            <span style={{ whiteSpace: "nowrap" }}>
+              {formatPrice(it.price * it.qty)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Total destacado */}
+      <div style={{ borderTop: "3px solid #000", borderBottom: "3px solid #000", padding: "6px 0", margin: "6px 0", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ fontSize: "18px", fontWeight: "900" }}>TOTAL:</span>
+        <span style={{ fontSize: "24px", fontWeight: "900" }}>{formatPrice(order.total)}</span>
+      </div>
+
+      {/* Estado del pago */}
+      <div style={{ fontSize: "12px", fontWeight: "800", marginBottom: "6px" }}>
+        ESTADO: <u>PAGADO ({order.culqiChargeId ? "YAPE / TARJETA" : "CONFIRMADO"})</u>
+      </div>
+
+      {/* Datos del Cliente y Despacho */}
+      <div style={{ borderTop: "2px dashed #000", paddingTop: "6px", fontSize: "13px", fontWeight: "800", lineHeight: "1.3" }}>
+        <div style={{ marginBottom: "3px" }}>
+          <strong>CLIENTE:</strong> {order.name}
+        </div>
+        <div style={{ marginBottom: "3px" }}>
+          <strong>TELÉFONO:</strong> {order.phone}
+        </div>
+        {order.delivery && (
+          <div style={{ marginTop: "4px" }}>
+            <strong>DIRECCIÓN:</strong>
+            <div style={{ fontSize: "14px", fontWeight: "900", marginTop: "1px" }}>
+              {order.address}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Espaciador de corte de papel */}
+      <div style={{ borderTop: "2px dashed #000", marginTop: "8px", paddingTop: "4px", textAlign: "center", fontSize: "10px", fontWeight: "700" }}>
+        *** FIN DE COMANDA ***
+      </div>
     </div>
   );
 }
 
+// Modal de vista previa en pantalla
 export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) {
   const [copied, setCopied] = useState(false);
 
@@ -90,12 +176,10 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      {/* Contenedor del Modal */}
       <div
         className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-neutral-800"
         style={{ background: "#141414" }}
       >
-        {/* Cabecera del modal */}
         <div className="px-5 py-4 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/60">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-yellow-400/15 flex items-center justify-center text-yellow-400">
@@ -114,10 +198,9 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
           </button>
         </div>
 
-        {/* Vista previa del papel térmico */}
         <div className="p-5 overflow-y-auto bg-neutral-950 flex justify-center">
           <div
-            className="w-full max-w-[340px] p-5 rounded shadow-lg text-black font-mono text-xs leading-relaxed select-text"
+            className="w-full max-w-[340px] p-5 rounded shadow-lg text-black font-sans text-xs leading-relaxed select-text"
             style={{
               background: "#FFFDF7",
               boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
@@ -125,65 +208,46 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
               borderBottom: "3px dashed #CCC",
             }}
           >
-            {/* Encabezado ticket */}
-            <div className="text-center pb-3 border-b border-dashed border-neutral-400">
-              <p className="font-black text-base tracking-wider">LOBO BURGER</p>
-              <p className="text-[10px] text-neutral-600">Hamburguesas & Broaster Artesanal</p>
-              <p className="text-[9px] text-neutral-500 mt-0.5">Surquillo & San Juan de Miraflores</p>
+            <div className="text-center pb-3 border-b-2 border-black">
+              <p className="font-black text-lg tracking-wider">LOBO BURGER</p>
+              <p className="text-[10px] font-bold text-neutral-700">Surquillo & San Juan de Miraflores</p>
             </div>
 
-            {/* Metadatos comanda */}
-            <div className="py-2.5 border-b border-dashed border-neutral-400 text-[11px] space-y-0.5">
-              <div className="flex justify-between items-center">
-                <span className="font-bold">COMANDA:</span>
-                <span className="font-black text-sm">#{order.id}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-600">FECHA:</span>
-                <span>{dateFormatted}</span>
-              </div>
-              <div className="flex justify-between font-bold mt-1">
-                <span>CANAL:</span>
-                <span className={order.delivery ? "text-red-700" : "text-emerald-700"}>
-                  {order.delivery ? "DELIVERY A DOMICILIO" : "RECOJO EN TIENDA"}
-                </span>
+            <div className="my-3 p-2 border-2 border-black text-center">
+              <div className="text-[10px] font-bold tracking-wider text-neutral-600">NÚMERO DE COMANDA</div>
+              <div className="text-2xl font-black">#{order.id}</div>
+              <div className="text-xs font-black text-red-700 mt-0.5">
+                {order.delivery ? "*** DELIVERY ***" : "*** RECOJO ***"}
               </div>
             </div>
 
-            {/* Detalle de items */}
-            <div className="py-3 border-b border-dashed border-neutral-400">
+            <div className="py-2 border-b border-dashed border-neutral-400 text-[11px] font-semibold flex justify-between">
+              <span>{dateFormatted}</span>
+            </div>
+
+            <div className="py-3 border-b-2 border-black">
               <div className="flex justify-between text-[10px] font-bold text-neutral-500 mb-1.5 pb-1 border-b border-neutral-300">
-                <span>CANT / DESCRIPCION</span>
+                <span>CANT / DESCRIPCIÓN</span>
                 <span>SUBTOTAL</span>
               </div>
-              <div className="space-y-1.5 text-xs">
+              <div className="space-y-1.5 text-sm">
                 {order.items.map((it, idx) => (
-                  <div key={idx} className="flex justify-between items-start">
-                    <span className="font-bold pr-2 leading-tight">
+                  <div key={idx} className="flex justify-between items-start font-bold">
+                    <span className="pr-2 leading-tight">
                       {it.qty}x {it.name}
                     </span>
-                    <span className="shrink-0 font-medium">{formatPrice(it.price * it.qty)}</span>
+                    <span className="shrink-0">{formatPrice(it.price * it.qty)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Totales */}
-            <div className="py-2.5 border-b border-dashed border-neutral-400">
-              <div className="flex justify-between items-baseline font-black text-sm pt-1">
-                <span>TOTAL:</span>
-                <span className="text-base">{formatPrice(order.total)}</span>
-              </div>
-              <div className="flex justify-between items-center text-[10px] text-neutral-600 mt-1">
-                <span>ESTADO PAGO:</span>
-                <span className="font-bold text-emerald-800">
-                  {order.culqiChargeId ? "PAGADO CON YAPE / TARJETA" : "PAGADO"}
-                </span>
-              </div>
+            <div className="py-3 border-b-2 border-black flex justify-between items-baseline font-black">
+              <span className="text-base">TOTAL:</span>
+              <span className="text-xl">{formatPrice(order.total)}</span>
             </div>
 
-            {/* Datos del cliente para despacho */}
-            <div className="pt-2.5 pb-1 text-[11px] space-y-1">
+            <div className="pt-3 text-[11px] font-semibold space-y-1">
               <div>
                 <span className="text-neutral-500 text-[10px] block">CLIENTE:</span>
                 <span className="font-bold text-xs">{order.name}</span>
@@ -195,20 +259,13 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
               {order.delivery && (
                 <div>
                   <span className="text-neutral-500 text-[10px] block">DIRECCIÓN:</span>
-                  <span className="font-bold leading-tight block">{order.address}</span>
+                  <span className="font-bold text-xs leading-tight block">{order.address}</span>
                 </div>
               )}
-            </div>
-
-            {/* Pie de ticket */}
-            <div className="mt-4 pt-2 text-center text-[9px] text-neutral-500 border-t border-dashed border-neutral-300">
-              <p className="font-bold text-black">www.loboburger.com</p>
-              <p className="mt-0.5">Comanda lista para cocina y despacho</p>
             </div>
           </div>
         </div>
 
-        {/* Barra de acciones */}
         <div className="p-4 border-t border-neutral-800 bg-neutral-900/60 flex items-center gap-2">
           <button
             onClick={handleCopy}
@@ -232,7 +289,6 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
   );
 }
 
-// Modal informativo de configuración de impresora para el local
 export function PrinterHelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   if (!isOpen) return null;
 
@@ -256,27 +312,27 @@ export function PrinterHelpModal({ isOpen, onClose }: { isOpen: boolean; onClose
           <div className="p-3 rounded-xl bg-yellow-400/10 border border-yellow-400/20 text-yellow-300 flex items-start gap-2">
             <Info size={16} className="shrink-0 mt-0.5" />
             <span>
-              La comanda está formateada exactamente para rollos estándar de <strong>80mm</strong> (Epson, Xprinter, Rongta, Sunmi o cualquier impresora térmica USB/Red/Bluetooth).
+              La comanda está formateada para ocupar el ancho completo de bobinas estándar de <strong>80mm</strong> (Epson, Xprinter, Rongta, Sunmi, etc.).
             </span>
           </div>
 
           <div>
             <p className="font-bold text-white mb-1">1. Ajuste único de impresión en el navegador:</p>
             <ul className="list-disc list-inside space-y-1 text-neutral-400 pl-1">
-              <li>Destino: Selecciona tu impresora térmica de 80mm.</li>
+              <li>Destino: Tu impresora térmica de 80mm.</li>
               <li>Márgenes: <strong>Ninguno (None)</strong>.</li>
               <li>Gráficos de fondo: <strong>Activado</strong>.</li>
-              <li>Encabezados y pies de página: <strong>Desactivado</strong> (para que no salga la URL ni fecha de Chrome).</li>
+              <li>Encabezados y pies de página: <strong>Desactivado</strong>.</li>
             </ul>
           </div>
 
           <div>
             <p className="font-bold text-white mb-1">2. Modo Silencioso Automático (Kiosk Printing):</p>
             <p className="text-neutral-400">
-              Si deseas que la comanda se imprima al instante <strong>sin mostrar la ventana de vista previa</strong>, puedes iniciar Google Chrome o Edge con el parámetro:
+              Para imprimir sin que aparezca la ventana emergente de confirmación:
             </p>
             <code className="block mt-1.5 p-2 rounded bg-neutral-900 border border-neutral-800 font-mono text-[11px] text-emerald-400 select-all">
-              chrome.exe --kiosk-printing
+              chrome.exe --kiosk-printing --app=https://loboburger.com/admin
             </code>
           </div>
         </div>
