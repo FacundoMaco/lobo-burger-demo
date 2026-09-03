@@ -48,3 +48,56 @@ export async function PATCH(request: Request) {
     return Response.json({ error: "No se pudo actualizar el pedido" }, { status: 500 });
   }
 }
+
+
+export async function POST(request: Request) {
+  let body: {
+    codigo?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+    delivery?: boolean;
+    address?: string;
+    items?: { id: number; name: string; price: number; qty: number }[];
+    total_centimos?: number;
+  } = {};
+
+  try {
+    body = await request.json();
+  } catch {
+    // Body opcional
+  }
+
+  const codigo = body.codigo || `LB-${Math.floor(1000 + Math.random() * 9000)}`;
+  const simPedido = {
+    codigo,
+    cliente_nombre: body.name || "Jaime Lobo (Simulación)",
+    cliente_telefono: body.phone || "987654321",
+    cliente_email: body.email || "jaime@loboburger.com",
+    delivery: body.delivery ?? true,
+    direccion: body.address || "Av. Angamos Este 1551, Surquillo",
+    items: body.items || [
+      { id: 5, name: "Burgazo", price: 28, qty: 1 },
+      { id: 13, name: "Combo Lobo", price: 25, qty: 1 },
+    ],
+    total_centimos: body.total_centimos || 5300,
+    estado: "pendiente",
+    created_at: new Date().toISOString(),
+  };
+
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .from("pedidos")
+      .insert([simPedido])
+      .select()
+      .single();
+
+    if (!error && data) {
+      return Response.json({ ok: true, pedido: data });
+    }
+  } catch (e) {
+    console.warn("Supabase no disponible para pedido simulado:", e);
+  }
+
+  return Response.json({ ok: true, pedido: simPedido });
+}

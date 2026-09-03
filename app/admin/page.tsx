@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
 import { ThermalTicketModal, ThermalPrintArea, PrinterHelpModal } from "@/components/thermal-ticket";
-import {
+import { Sparkles,
   LayoutDashboard,
   ExternalLink,
   ShoppingBag,
@@ -360,6 +360,54 @@ export default function AdminPage() {
   }, []);
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const initialLoadRef = useRef(true);
+
+  // Función para simular un pedido entrante en vivo (prueba de timbre y ticketera)
+  const handleSimularPedido = async () => {
+    const simCode = `LB-${Math.floor(1000 + Math.random() * 9000)}`;
+    const simOrder: Order = {
+      id: simCode,
+      createdAt: new Date().toISOString(),
+      name: "Jaime Lobo (Simulación)",
+      phone: "987654321",
+      email: "jaime@loboburger.com",
+      delivery: true,
+      address: "Av. Angamos Este 1551, Surquillo",
+      items: [
+        { id: 5, name: "Burgazo", price: 28, qty: 1 },
+        { id: 13, name: "Combo Lobo", price: 25, qty: 1 },
+      ],
+      total: 53,
+      status: "pendiente",
+    };
+
+    // 1. Evitar que el polling lo trate como nuevo duplicado
+    knownOrderIdsRef.current.add(simOrder.id);
+
+    // 2. Insertar inmediatamente en la columna de pendientes del KDS
+    setOrders(prev => [simOrder, ...prev]);
+
+    // 3. Sonar campana de cocina
+    if (audioEnabledRef.current) {
+      playOrderChime();
+    }
+
+    // 4. Disparar impresión térmica automática
+    setPrintingOrder(simOrder);
+    setTimeout(() => {
+      window.print();
+    }, 400);
+
+    // 5. Guardar en base de datos si está disponible
+    try {
+      await fetch("/api/admin/pedidos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(simOrder),
+      });
+    } catch {
+      // Ignorar si está offline
+    }
+  };
 
   const handleToggleAutoPrint = () => {
     setAutoPrint(prev => {
@@ -984,6 +1032,21 @@ export default function AdminPage() {
                   >
                     {audioEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
                     <span className="hidden sm:inline">{audioEnabled ? "Timbre ON" : "Muted"}</span>
+                  </button>
+
+                                    {/* Botón para simular pedido web en vivo */}
+                  <button
+                    onClick={handleSimularPedido}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-lg transition-all active:scale-95 shadow-md"
+                    style={{
+                      background: "#FFD600",
+                      color: "#7B0000",
+                      border: "1px solid #FFD600",
+                    }}
+                    title="Simular la entrada de un pedido web para probar el timbre y la ticketera"
+                  >
+                    <Sparkles size={13} />
+                    <span>Simular Pedido Web</span>
                   </button>
 
                   {/* Auto-impresión de comandas & Guía 80mm */}
