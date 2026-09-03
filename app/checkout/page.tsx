@@ -51,6 +51,7 @@ export default function CheckoutPage() {
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"yape" | "tarjeta">("yape");
   const [yapePhone, setYapePhone] = useState("");
+  const [yapePhoneTouched, setYapePhoneTouched] = useState(false);
   const [yapeOtp, setYapeOtp] = useState("");
 
   // Validador compartido de datos de despacho
@@ -91,11 +92,34 @@ export default function CheckoutPage() {
     setPayError(null);
     setPaying(true);
 
-    // 1. Generar token Yape directo en Culqi
+    // 1. Cotizar en vivo contra Postgres (MENU-04): garantiza que el monto del token
+    // Yape coincida exactamente con el monto del cargo exigido por Culqi, y valida
+    // disponibilidad sin quemar el OTP del cliente si un precio cambió o se agotó.
+    let serverAmountCents = Math.round(total * 100);
+    try {
+      const quoteRes = await fetch("/api/cotizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items.map(i => ({ id: i.id, qty: i.qty })) }),
+      });
+      const quoteData = await quoteRes.json();
+      if (!quoteRes.ok) {
+        setPayError(quoteData.error || "No pudimos validar la disponibilidad de tu pedido");
+        setPaying(false);
+        return;
+      }
+      serverAmountCents = quoteData.totalCents;
+    } catch {
+      setPayError("Error de conexión al verificar el pedido. Intenta de nuevo.");
+      setPaying(false);
+      return;
+    }
+
+    // 2. Generar token Yape directo en Culqi con el monto validado del servidor
     const tokenRes = await createYapeToken({
       phone: cleanPhone,
       otp: cleanOtp,
-      amountCents: Math.round(total * 100),
+      amountCents: serverAmountCents,
     });
 
     if (!tokenRes.success) {
@@ -104,7 +128,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    // 2. Cobrar contra el servidor (/api/charge)
+    // 3. Cobrar contra el servidor (/api/charge)
     try {
       const res = await fetch("/api/charge", {
         method: "POST",
@@ -369,7 +393,14 @@ export default function CheckoutPage() {
                 type="tel"
                 inputMode="numeric"
                 value={phone}
-                onChange={e => { setPhone(e.target.value); setErrors(p => ({ ...p, phone: undefined })); }}
+                onChange={e => {
+                  const val = e.target.value;
+                  setPhone(val);
+                  setErrors(p => ({ ...p, phone: undefined }));
+                  if (!yapePhoneTouched) {
+                    setYapePhone(val.replace(/\D/g, ""));
+                  }
+                }}
                 placeholder="Ej: 999 888 777"
                 autoComplete="tel"
                 className={inputCls}
@@ -415,7 +446,9 @@ export default function CheckoutPage() {
                 setPaymentMethod("yape");
                 setShowPayment(false);
                 setPayError(null);
-                if (!yapePhone && phone) setYapePhone(phone.replace(/\D/g, ""));
+                if (!yapePhone && !yapePhoneTouched && phone) {
+                  setYapePhone(phone.replace(/\D/g, ""));
+                }
               }}
               className="flex flex-col items-center justify-center p-3.5 rounded-xl border transition-all cursor-pointer relative"
               style={{
@@ -466,8 +499,11 @@ export default function CheckoutPage() {
                   type="tel"
                   inputMode="numeric"
                   maxLength={9}
-                  value={yapePhone || phone}
-                  onChange={e => setYapePhone(e.target.value.replace(/\D/g, ""))}
+                  value={yapePhone}
+                  onChange={e => {
+                    setYapePhoneTouched(true);
+                    setYapePhone(e.target.value.replace(/\D/g, ""));
+                  }}
                   placeholder="Ej: 987654321"
                   className={inputCls}
                   style={inputStyle}
