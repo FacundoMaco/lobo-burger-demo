@@ -1,4 +1,5 @@
 @AGENTS.md
+@CONTEXT_SESION.md
 
 > **Antes de escribir código:** esta versión de Next.js (16.2.9) tiene breaking changes. Leé `node_modules/next/dist/docs/` — `middleware.ts` ya no existe, es `proxy.ts` en la raíz.
 
