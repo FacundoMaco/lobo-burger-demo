@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
 import { scheduleAutoPrint } from "@/lib/auto-print";
+import { persistOrderTransition } from "@/lib/order-transition";
 import { ThermalTicketModal, ThermalPrintArea, PrinterHelpModal } from "@/components/thermal-ticket";
 import { Sparkles,
   LayoutDashboard,
@@ -354,6 +355,8 @@ function ValidarTab() {
 export default function AdminPage() {
   const [tab,    setTab]    = useState<Tab>("pedidos");
   const [orders, setOrders] = useState<Order[]>([]);
+  // Ids de pedidos cuya transicion a en_preparacion no se pudo persistir en Supabase.
+  const [failedTransitions, setFailedTransitions] = useState<string[]>([]);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
   const [showPrinterHelp, setShowPrinterHelp] = useState(false);
   const [autoPrint, setAutoPrint] = useState<boolean>(() => {
@@ -492,6 +495,14 @@ export default function AdminPage() {
         status: p.estado as OrderStatus,
       }));
 
+      // Purgar de failedTransitions los ids cuyo pedido ya no esta en pendiente:
+      // la DB confirmo la transicion por otra via (p.ej. el boton manual).
+      const stillPendingIds = new Set(mapped.filter(o => o.status === "pendiente").map(o => o.id));
+      setFailedTransitions(prev => {
+        const next = prev.filter(id => stillPendingIds.has(id));
+        return next.length === prev.length ? prev : next;
+      });
+
       // Preservar pedidos simulados en local para que no desaparezcan al refrescar
       setOrders(prev => {
         const localSim = prev.filter(o => o.name.includes("Simulación") || o.id.startsWith("LB-SIM"));
@@ -519,7 +530,10 @@ export default function AdminPage() {
           // Intervalo de 1.5s entre comandas para evitar bloqueo del spooler de Windows.
           // El pedido pasa a 'en_preparacion' (KDS + PATCH) recién DESPUÉS de que se
           // disparó window.print() de ESA comanda: si la impresión falla, el pedido
-          // queda 'pendiente' y el timbre sigue sonando.
+          // queda 'pendiente' y el timbre sigue sonando. El id solo se considera
+          // resuelto tras persistencia exitosa del PATCH: si el PATCH falla (o
+          // devuelve 500), el id se libera de knownOrderIdsRef para que el siguiente
+          // refresh() lo vuelva a detectar como entrante y reintente.
           if (autoPrintRef.current) {
             const timers = scheduleAutoPrint({
               orders: incomingOrders,
@@ -527,11 +541,16 @@ export default function AdminPage() {
               onPrint: () => window.print(),
               onPrinted: (toPrint) => {
                 setOrders(list => list.map(o => o.id === toPrint.id ? { ...o, status: "en_preparacion" } : o));
-                fetch("/api/admin/pedidos", {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ codigo: toPrint.id, estado: "en_preparacion" }),
-                }).catch(() => {});
+                persistOrderTransition({ codigo: toPrint.id, estado: "en_preparacion" }).then(result => {
+                  if (result.ok) {
+                    setFailedTransitions(prev => prev.includes(toPrint.id) ? prev.filter(id => id !== toPrint.id) : prev);
+                    return;
+                  }
+                  console.error(`No se pudo persistir en_preparacion para ${toPrint.id}:`, result.reason);
+                  setOrders(list => list.map(o => o.id === toPrint.id ? { ...o, status: "pendiente" } : o));
+                  knownOrderIdsRef.current.delete(toPrint.id);
+                  setFailedTransitions(prev => prev.includes(toPrint.id) ? prev : [...prev, toPrint.id]);
+                });
               },
             });
             printTimersRef.current.push(timers);
@@ -1162,6 +1181,32 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Banner de transiciones fallidas: PATCH a en_preparacion que no persistio */}
+              {failedTransitions.length > 0 && (
+                <div
+                  className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold mb-4"
+                  style={{
+                    background: "rgba(231,76,60,0.12)",
+                    color: "#e74c3c",
+                    border: "1px solid rgba(231,76,60,0.3)",
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <X size={14} />
+                    <span>
+                      {failedTransitions.length} pedido{failedTransitions.length > 1 ? "s" : ""} ({failedTransitions.join(", ")}) no se pudo confirmar en la base de datos — se reintentara automaticamente
+                    </span>
+                  </div>
+                  <button
+                    onClick={refresh}
+                    className="shrink-0 px-2 py-1 rounded transition-colors"
+                    style={{ background: "rgba(231,76,60,0.2)", border: "1px solid rgba(231,76,60,0.4)" }}
+                  >
+                    Reintentar ahora
+                  </button>
+                </div>
+              )}
 
               {/* Barra de Filtros Simplificada */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
