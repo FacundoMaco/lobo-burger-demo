@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
-import { scheduleAutoPrint } from "@/lib/auto-print";
+import { scheduleAutoPrint, type AutoPrintHandle } from "@/lib/auto-print";
 import { persistOrderTransition } from "@/lib/order-transition";
 import { ThermalTicketModal, ThermalPrintArea, PrinterHelpModal } from "@/components/thermal-ticket";
 import { Sparkles,
@@ -463,10 +463,12 @@ export default function AdminPage() {
 
   const prevPendingRef = useRef<number | null>(null);
   const undoTimerRef = useRef<NodeJS.Timeout | null>(null);
-  // Guarda cada grupo de timers devuelto por scheduleAutoPrint (referencia, no copia:
-  // el array interno se sigue llenando con el timer de print despues del stage) para
-  // poder cancelarlos todos si /admin se desmonta a mitad del escalonado (guardrail #5).
-  const printTimersRef = useRef<ReturnType<typeof setTimeout>[][]>([]);
+  // Guarda el handle devuelto por scheduleAutoPrint del batch en curso. Nunca
+  // acumula mas de un grupo: al llegar un batch nuevo se cancela el anterior
+  // (una sola secuencia de impresion activa a la vez, guardrail #5) y en el
+  // cleanup del efecto de polling se cancela el que quede si /admin se
+  // desmonta a mitad del escalonado.
+  const printHandlesRef = useRef<AutoPrintHandle<Order>[]>([]);
 
   // Los pedidos vienen de Supabase, no del localStorage de este navegador:
   // antes el panel solo veia los pedidos hechos en el mismo dispositivo.
@@ -535,7 +537,20 @@ export default function AdminPage() {
           // devuelve 500), el id se libera de knownOrderIdsRef para que el siguiente
           // refresh() lo vuelva a detectar como entrante y reintente.
           if (autoPrintRef.current) {
-            const timers = scheduleAutoPrint({
+            // Cancelar el batch anterior antes de programar uno nuevo: evita que
+            // dos secuencias escalonadas compitan por el mismo `printingOrder`.
+            // Los pedidos que no llegaron a imprimirse se liberan de
+            // knownOrderIdsRef (filtrados contra el batch entrante, que ya se
+            // agrego arriba) para que el siguiente refresh() los reimprima.
+            const incomingIds = new Set(incomingOrders.map(o => o.id));
+            printHandlesRef.current.forEach(handle => {
+              handle.cancel().forEach(o => {
+                if (!incomingIds.has(o.id)) knownOrderIdsRef.current.delete(o.id);
+              });
+            });
+            printHandlesRef.current = [];
+
+            const handle = scheduleAutoPrint({
               orders: incomingOrders,
               onStage: (toPrint) => setPrintingOrder(toPrint),
               onPrint: () => window.print(),
@@ -553,7 +568,7 @@ export default function AdminPage() {
                 });
               },
             });
-            printTimersRef.current.push(timers);
+            printHandlesRef.current.push(handle);
           }
         }
       }
@@ -571,9 +586,11 @@ export default function AdminPage() {
     return () => {
       clearInterval(interval);
       // Cancelar auto-prints pendientes para que ningun pedido se marque
-      // 'en_preparacion' despues de que /admin ya se desmonto.
-      printTimersRef.current.forEach(group => group.forEach(clearTimeout));
-      printTimersRef.current = [];
+      // 'en_preparacion' despues de que /admin ya se desmonto. No se liberan
+      // ids de knownOrderIdsRef aqui: el componente ya no existe, y un
+      // remontaje hace un initialLoadRef fresco.
+      printHandlesRef.current.forEach(handle => handle.cancel());
+      printHandlesRef.current = [];
     };
   }, [refresh]);
 
