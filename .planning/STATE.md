@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 Phase: 01 (integridad-del-pago-y-red-de-seguridad) — EXECUTING
 Plan: 1 of 8
 Status: Executing Phase 01
-Last activity: 2026-09-04 - Completed quick task 260904-9lv: Fix batches de auto-print sin cancelar el anterior
+Last activity: 2026-09-04 - Completed quick task 260904-9po: Fix validacion server de cremas (categoria + duplicados)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -79,6 +79,7 @@ Ninguno registrado aún.
 - [Fase 2] El plan 02-01 dejó el build roto a propósito ("quedan rotos a nivel de import hasta el plan 02-02, es esperado"). Se revirtió en el quick task 260902-3pr. La premisa queda anulada por el Guardrail 1: cero builds rotos entre tareas.
 - [Fase 2] `/api/admin/puntos` y `/api/admin/canjear` no existen. El KDS táctil de `app/admin/page.tsx` que los consume está en cuarentena en `.context/kds-admin-page.tsx.bak` hasta que 02-02 cierre esas rutas.
 - La baseline de lint documentada en AGENTS.md ("3 errores react-hooks/set-state-in-effect") está desactualizada: la baseline real medida en 2026-09-04 es 5 problemas (los 3 originales + 2 `no-explicit-any` y 1 `no-unused-vars` en `app/api/admin/pedidos/route.ts`, preexistentes, no introducidos por los quick tasks 260904-*). AGENTS.md debería actualizarse.
+- `lib/menu.ts` (carta estatica, ids 1..17, categorias: Combos/Burgers/Pollo/Complementos/Bebidas) y la tabla `menu_items` en vivo (seed `20260901000000_menu_items.sql`, ids 1001+, categorias: Enchiladas/Broaster/Salchipapas-Power Plates/Combos xtremos/Bebidas/Hamburguesas) son DOS taxonomias de categoria que NO se intersectan (excepto "Bebidas"). Cualquier validacion server que compare categoria de item contra `CATEGORIAS_CON_CREMAS` de `lib/menu.ts` debe usar deny-list (`categoriaAdmiteCremas()` en lib/menu.ts, quick task 260904-9po), nunca allow-list directo contra datos en vivo de `getMenuItemLive` — un allow-list rechazaria TODO pedido real con cremas.
 - El navegador de claude-in-chrome en esta sesión NO alcanza el `localhost` del sandbox de Bash: son redes distintas. `localhost:3000` en Chrome sirve un proceso Next.js dev que ya corría fuera del sandbox (probablemente lanzado por Jaime/Facundo antes de esta sesión) y que mis `kill`/`npm run dev`/`npm run build && npm run start` dentro del sandbox nunca tocan ni reemplazan. Confirmado 2026-09-04: tras matar y reconstruir el server en el sandbox varias veces, Chrome seguía sirviendo bundles con chunks de HMR/dev viejos (sin `cartLineId`), mientras `curl` dentro del sandbox sí veía el fix. Verificación manual E2E de UI vía claude-in-chrome no es confiable en este entorno — confiar en el gate automatizado (`tsc`/`vitest`/`lint`/`next build`) y, si se necesita UI real, pedirle al usuario que la corra en su propio Conductor/terminal.
 
 ### Quick Tasks Completed
@@ -90,6 +91,7 @@ Ninguno registrado aún.
 | 260904-83o | Fix: PATCH de en_preparacion fire-and-forget sin retry, pedido quedaba huerfano en pendiente | 2026-09-04 | d52fcf6 | [260904-83o-fix-patch-de-transicion-a-en-preparacion](./quick/260904-83o-fix-patch-de-transicion-a-en-preparacion/) |
 | 260904-8d1 | Fix: repetir item con cremas no reabria selector, segunda unidad heredaba cremas en silencio | 2026-09-04 | eb0c118 | [260904-8d1-fix-en-app-page-tsx-tocar-el-boton-en-un](./quick/260904-8d1-fix-en-app-page-tsx-tocar-el-boton-en-un/) |
 | 260904-9lv | Fix: batches de auto-print se acumulaban sin cancelar el anterior; cancel() libera pedidos no impresos para reintento | 2026-09-04 | 861dacf | [260904-9lv-fix-los-settimeout-escalonados-de-auto-p](./quick/260904-9lv-fix-los-settimeout-escalonados-de-auto-p/) |
+| 260904-9po | Fix: /api/charge no validaba categoria cremas-eligible ni duplicados; categoriaAdmiteCremas() deny-list (taxonomias de categoria de lib/menu.ts y la tabla menu_items en vivo no se intersectan) | 2026-09-04 | 7d1cca5 | [260904-9po-fix-en-app-api-charge-route-ts-la-valida](./quick/260904-9po-fix-en-app-api-charge-route-ts-la-valida/) |
 
 ## Deferred Items & Future Backlog
 
