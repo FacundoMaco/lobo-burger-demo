@@ -25,6 +25,17 @@ export const CATEGORIAS_CON_CREMAS = ["Combos", "Burgers", "Pollo", "Complemento
 export const CREMAS_OPCIONES = ["Mayonesa", "Mostaza", "Ketchup", "Ají", "Golf", "Aceituna", "Tártara"];
 export const CREMAS_MAX = 3;
 
+// Deny-list, no allow-list: las categorias de esta carta estatica
+// (CATEGORIAS_CON_CREMAS) y las de la tabla menu_items en Postgres no
+// coinciden, asi que validar contra CATEGORIAS_CON_CREMAS rechazaria todo
+// pedido real. "Bebidas" es el unico nombre identico en ambas taxonomias.
+export const CATEGORIAS_SIN_CREMAS = ["Bebidas"];
+
+export function categoriaAdmiteCremas(category: string | null | undefined): boolean {
+  if (!category) return false;
+  return !CATEGORIAS_SIN_CREMAS.includes(category.trim());
+}
+
 // Precios por confirmar con la carta oficial de Jaime.
 export const MENU_ITEMS: MenuItem[] = [
   { id: 13, category: "Combos",       name: "Combo Lobo",            description: "Burger de la casa + Salchipapa Clasica + Gaseosa.",                        price: 25, badge: "AHORRA S/8",  originalPrice: 33,   image: "/images/menu/a.webp",                     agotado: false },

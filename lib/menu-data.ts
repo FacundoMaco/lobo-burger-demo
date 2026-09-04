@@ -75,12 +75,12 @@ export const getMenuItemsCached = unstable_cache(
  */
 export async function getMenuItemLive(
   id: number
-): Promise<{ id: number; name: string; precio_centimos: number; agotado: boolean } | undefined> {
+): Promise<{ id: number; name: string; precio_centimos: number; agotado: boolean; category: string } | undefined> {
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("menu_items")
-      .select("id, name, precio_centimos, agotado")
+      .select("id, name, precio_centimos, agotado, category")
       .eq("id", id)
       .single();
 
@@ -90,6 +90,7 @@ export async function getMenuItemLive(
         name: data.name,
         precio_centimos: data.precio_centimos,
         agotado: Boolean(data.agotado),
+        category: data.category,
       };
     }
   } catch {
@@ -104,6 +105,7 @@ export async function getMenuItemLive(
       name: local.name,
       precio_centimos: Math.round(local.price * 100),
       agotado: Boolean(local.agotado),
+      category: local.category,
     };
   }
 

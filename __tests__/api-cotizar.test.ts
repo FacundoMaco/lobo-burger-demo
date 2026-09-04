@@ -44,6 +44,7 @@ describe("POST /api/cotizar", () => {
       name: "Hamburguesa Agotada",
       precio_centimos: 2000,
       agotado: true,
+      category: "Burgers",
     });
 
     const res = await POST(req({ items: [{ id: 1, qty: 1 }] }));
@@ -54,8 +55,8 @@ describe("POST /api/cotizar", () => {
 
   it("calcula el totalCents exacto de la base de datos en vivo", async () => {
     vi.mocked(getMenuItemLive)
-      .mockResolvedValueOnce({ id: 1, name: "Burger A", precio_centimos: 2000, agotado: false })
-      .mockResolvedValueOnce({ id: 2, name: "Burger B", precio_centimos: 1500, agotado: false });
+      .mockResolvedValueOnce({ id: 1, name: "Burger A", precio_centimos: 2000, agotado: false, category: "Burgers" })
+      .mockResolvedValueOnce({ id: 2, name: "Burger B", precio_centimos: 1500, agotado: false, category: "Burgers" });
 
     const res = await POST(
       req({

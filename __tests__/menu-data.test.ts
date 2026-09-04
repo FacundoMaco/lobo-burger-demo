@@ -66,15 +66,15 @@ describe("lib/menu-data", () => {
   });
 
   describe("getMenuItemLive", () => {
-    it("devuelve el precio_centimos crudo y estado agotado sin cachear", async () => {
-      const row = { id: 1001, name: "Enchilada de Pollo", precio_centimos: 1790, agotado: false };
+    it("devuelve el precio_centimos crudo, estado agotado y category sin cachear", async () => {
+      const row = { id: 1001, name: "Enchilada de Pollo", precio_centimos: 1790, agotado: false, category: "Enchiladas" };
       const { client, calls } = createSupabaseMock({
         selectEqResult: { data: row, error: null },
       });
       mockClient = client;
 
       const res = await getMenuItemLive(1001);
-      expect(res).toEqual({ id: 1001, name: "Enchilada de Pollo", precio_centimos: 1790, agotado: false });
+      expect(res).toEqual({ id: 1001, name: "Enchilada de Pollo", precio_centimos: 1790, agotado: false, category: "Enchiladas" });
       expect(calls.selectEqArgs).toContainEqual({ column: "id", value: 1001 });
     });
 
