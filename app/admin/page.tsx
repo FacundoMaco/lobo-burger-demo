@@ -510,13 +510,25 @@ export default function AdminPage() {
         if (incomingOrders.length > 0) {
           if (audioEnabledRef.current) playOrderChime();
 
-          // Auto-impresión directa en ticketera térmica (80mm)
+          // Auto-impresión directa y secuencial en ticketera térmica (80mm)
+          // Intervalo de 1.5s entre comandas para evitar bloqueo del spooler de Windows.
+          // Transición automática a 'en_preparacion' para actualizar KDS y detener el timbre continuo.
           if (autoPrintRef.current) {
-            const toPrint = incomingOrders[0];
-            setPrintingOrder(toPrint);
-            setTimeout(() => {
-              window.print();
-            }, 400);
+            incomingOrders.forEach((toPrint, i) => {
+              setTimeout(() => {
+                setPrintingOrder(toPrint);
+                setTimeout(() => window.print(), 300);
+              }, i * 1500);
+
+              const idx = mapped.findIndex(o => o.id === toPrint.id);
+              if (idx !== -1) mapped[idx] = { ...mapped[idx], status: "en_preparacion" };
+
+              fetch("/api/admin/pedidos", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ codigo: toPrint.id, estado: "en_preparacion" }),
+              }).catch(() => {});
+            });
           }
         }
       }
