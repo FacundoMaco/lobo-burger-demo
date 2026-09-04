@@ -15,6 +15,11 @@ export interface ScheduleAutoPrintOptions<T> {
   printDelayMs?: number;
 }
 
+export interface AutoPrintHandle<T> {
+  timers: ReturnType<typeof setTimeout>[];
+  cancel: () => T[];
+}
+
 export function scheduleAutoPrint<T>({
   orders,
   onStage,
@@ -22,16 +27,21 @@ export function scheduleAutoPrint<T>({
   onPrinted,
   intervalMs = 1500,
   printDelayMs = 300,
-}: ScheduleAutoPrintOptions<T>): ReturnType<typeof setTimeout>[] {
+}: ScheduleAutoPrintOptions<T>): AutoPrintHandle<T> {
   const timers: ReturnType<typeof setTimeout>[] = [];
+  const pending = new Set<T>(orders);
+  let cancelled = false;
 
   orders.forEach((order, i) => {
     const stageTimer = setTimeout(() => {
+      if (cancelled) return;
       onStage(order);
 
       const printTimer = setTimeout(() => {
+        if (cancelled) return;
         try {
           onPrint(order);
+          pending.delete(order);
           onPrinted(order);
         } catch {
           // Impresion fallida: el pedido queda sin marcar y el resto de la
@@ -45,5 +55,15 @@ export function scheduleAutoPrint<T>({
     timers.push(stageTimer);
   });
 
-  return timers;
+  const cancel = (): T[] => {
+    if (cancelled) return [];
+    cancelled = true;
+    timers.forEach(clearTimeout);
+    timers.length = 0;
+    const remaining = Array.from(pending);
+    pending.clear();
+    return remaining;
+  };
+
+  return { timers, cancel };
 }

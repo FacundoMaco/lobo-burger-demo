@@ -82,17 +82,74 @@ describe("scheduleAutoPrint", () => {
     const orders: FakeOrder[] = [{ id: "A" }, { id: "B" }];
     const calls: string[] = [];
 
-    const timers = scheduleAutoPrint({
+    const handle = scheduleAutoPrint({
       orders,
       onStage: o => calls.push(`stage:${o.id}`),
       onPrint: o => calls.push(`print:${o.id}`),
       onPrinted: o => calls.push(`printed:${o.id}`),
     });
 
-    timers.forEach(clearTimeout);
+    handle.cancel();
 
     vi.advanceTimersByTime(5000);
 
     expect(calls).toHaveLength(0);
+  });
+
+  it("cancel() a mitad del escalonado devuelve los pedidos no impresos", () => {
+    const orders: FakeOrder[] = [{ id: "A" }, { id: "B" }, { id: "C" }];
+    const calls: string[] = [];
+
+    const handle = scheduleAutoPrint({
+      orders,
+      onStage: o => calls.push(`stage:${o.id}`),
+      onPrint: o => calls.push(`print:${o.id}`),
+      onPrinted: o => calls.push(`printed:${o.id}`),
+    });
+
+    // A llega a imprimirse (stage + print delay), B y C todavia no.
+    vi.advanceTimersByTime(800);
+    expect(calls).toEqual(["stage:A", "print:A", "printed:A"]);
+
+    const remaining = handle.cancel();
+
+    expect(remaining.map(o => o.id).sort()).toEqual(["B", "C"]);
+
+    vi.advanceTimersByTime(5000);
+
+    expect(calls).toEqual(["stage:A", "print:A", "printed:A"]);
+  });
+
+  it("cancel() llamado despues de que la cola termino devuelve []", () => {
+    const orders: FakeOrder[] = [{ id: "A" }];
+    const calls: string[] = [];
+
+    const handle = scheduleAutoPrint({
+      orders,
+      onStage: o => calls.push(`stage:${o.id}`),
+      onPrint: o => calls.push(`print:${o.id}`),
+      onPrinted: o => calls.push(`printed:${o.id}`),
+    });
+
+    vi.advanceTimersByTime(2000);
+    expect(calls).toEqual(["stage:A", "print:A", "printed:A"]);
+
+    expect(handle.cancel()).toEqual([]);
+  });
+
+  it("cancel() es idempotente: la segunda llamada devuelve []", () => {
+    const orders: FakeOrder[] = [{ id: "A" }, { id: "B" }];
+
+    const handle = scheduleAutoPrint({
+      orders,
+      onStage: () => {},
+      onPrint: () => {},
+      onPrinted: () => {},
+    });
+
+    const first = handle.cancel();
+    expect(first.map(o => o.id).sort()).toEqual(["A", "B"]);
+
+    expect(handle.cancel()).toEqual([]);
   });
 });
