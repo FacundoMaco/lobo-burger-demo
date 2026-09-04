@@ -104,7 +104,7 @@ function minutesAgo(iso: string): number {
 // fuera de alcance para hoy.
 const DELIVERY_FORWARD_NUMBER = "51923368745";
 function buildDeliveryForwardUrl(o: Order): string {
-  const lines = o.items.map(i => `- ${i.qty}x ${i.name}`).join("\n");
+  const lines = o.items.map(i => `- ${i.qty}x ${i.name}${i.cremas?.length ? ` (Cremas: ${i.cremas.join(", ")})` : ""}`).join("\n");
   const gpsLine = o.lat != null && o.lng != null
     ? `\nGPS: https://maps.google.com/?q=${o.lat},${o.lng}`
     : "";

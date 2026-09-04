@@ -112,8 +112,8 @@ export function ThermalPrintArea({ order }: { order: Order | null }) {
               </span>
             </div>
             {it.cremas && it.cremas.length > 0 && (
-              <div style={{ fontSize: "12px", fontWeight: "700", paddingLeft: "14px" }}>
-                Cremas: {it.cremas.join(", ")}
+              <div style={{ fontSize: "12px", fontWeight: "900", paddingLeft: "10px", textTransform: "uppercase" }}>
+                + CREMAS: {it.cremas.join(" / ")}
               </div>
             )}
           </div>
