@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 Phase: 01 (integridad-del-pago-y-red-de-seguridad) — EXECUTING
 Plan: 1 of 8
 Status: Executing Phase 01
-Last activity: 2026-09-04 - Completed quick task 260904-9yt: Derivar CATEGORIAS_CON_CREMAS de CATEGORIES
+Last activity: 2026-09-04 - Completed quick task 260904-a1c: Fix doble beep del chime en KDS (gate de espaciado minimo)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -94,6 +94,7 @@ Ninguno registrado aún.
 | 260904-9po | Fix: /api/charge no validaba categoria cremas-eligible ni duplicados; categoriaAdmiteCremas() deny-list (taxonomias de categoria de lib/menu.ts y la tabla menu_items en vivo no se intersectan) | 2026-09-04 | 7d1cca5 | [260904-9po-fix-en-app-api-charge-route-ts-la-valida](./quick/260904-9po-fix-en-app-api-charge-route-ts-la-valida/) |
 | 260904-9uy | Fix: buildDeliveryForwardUrl duplicaba buildWhatsAppUrl con templates que divergian; unificado con opts {to, includeGps}, freeze test del mensaje real de cliente | 2026-09-04 | d3d5e3e | [260904-9uy-fix-builddeliveryforwardurl-en-app-admin](./quick/260904-9uy-fix-builddeliveryforwardurl-en-app-admin/) |
 | 260904-9yt | Fix: CATEGORIAS_CON_CREMAS era copia manual de CATEGORIES; ahora se deriva por exclusion | 2026-09-04 | eae00ea | [260904-9yt-fix-categorias-con-cremas-en-lib-menu-ts](./quick/260904-9yt-fix-categorias-con-cremas-en-lib-menu-ts/) |
+| 260904-a1c | Fix: chime inmediato e interval de 2.5s del KDS podian solaparse (doble beep); gate de espaciado minimo de 1200ms en lib/chime-gate.ts | 2026-09-04 | 4e96b96 | [260904-a1c-fix-en-app-admin-page-tsx-el-chime-inmed](./quick/260904-a1c-fix-en-app-admin-page-tsx-el-chime-inmed/) |
 
 ## Deferred Items & Future Backlog
 
