@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
+import { scheduleAutoPrint } from "@/lib/auto-print";
 import { ThermalTicketModal, ThermalPrintArea, PrinterHelpModal } from "@/components/thermal-ticket";
 import { Sparkles,
   LayoutDashboard,
@@ -459,6 +460,10 @@ export default function AdminPage() {
 
   const prevPendingRef = useRef<number | null>(null);
   const undoTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Guarda cada grupo de timers devuelto por scheduleAutoPrint (referencia, no copia:
+  // el array interno se sigue llenando con el timer de print despues del stage) para
+  // poder cancelarlos todos si /admin se desmonta a mitad del escalonado (guardrail #5).
+  const printTimersRef = useRef<ReturnType<typeof setTimeout>[][]>([]);
 
   // Los pedidos vienen de Supabase, no del localStorage de este navegador:
   // antes el panel solo veia los pedidos hechos en el mismo dispositivo.
@@ -512,23 +517,24 @@ export default function AdminPage() {
 
           // Auto-impresión directa y secuencial en ticketera térmica (80mm)
           // Intervalo de 1.5s entre comandas para evitar bloqueo del spooler de Windows.
-          // Transición automática a 'en_preparacion' para actualizar KDS y detener el timbre continuo.
+          // El pedido pasa a 'en_preparacion' (KDS + PATCH) recién DESPUÉS de que se
+          // disparó window.print() de ESA comanda: si la impresión falla, el pedido
+          // queda 'pendiente' y el timbre sigue sonando.
           if (autoPrintRef.current) {
-            incomingOrders.forEach((toPrint, i) => {
-              setTimeout(() => {
-                setPrintingOrder(toPrint);
-                setTimeout(() => window.print(), 300);
-              }, i * 1500);
-
-              const idx = mapped.findIndex(o => o.id === toPrint.id);
-              if (idx !== -1) mapped[idx] = { ...mapped[idx], status: "en_preparacion" };
-
-              fetch("/api/admin/pedidos", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ codigo: toPrint.id, estado: "en_preparacion" }),
-              }).catch(() => {});
+            const timers = scheduleAutoPrint({
+              orders: incomingOrders,
+              onStage: (toPrint) => setPrintingOrder(toPrint),
+              onPrint: () => window.print(),
+              onPrinted: (toPrint) => {
+                setOrders(list => list.map(o => o.id === toPrint.id ? { ...o, status: "en_preparacion" } : o));
+                fetch("/api/admin/pedidos", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ codigo: toPrint.id, estado: "en_preparacion" }),
+                }).catch(() => {});
+              },
             });
+            printTimersRef.current.push(timers);
           }
         }
       }
@@ -543,7 +549,13 @@ export default function AdminPage() {
   useEffect(() => {
     refresh();
     const interval = setInterval(refresh, 10000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      // Cancelar auto-prints pendientes para que ningun pedido se marque
+      // 'en_preparacion' despues de que /admin ya se desmonto.
+      printTimersRef.current.forEach(group => group.forEach(clearTimeout));
+      printTimersRef.current = [];
+    };
   }, [refresh]);
 
   const handleStatus = async (id: string, next: OrderStatus) => {
