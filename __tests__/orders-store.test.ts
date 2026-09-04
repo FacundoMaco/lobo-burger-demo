@@ -90,4 +90,68 @@ describe("buildWhatsAppUrl (comportamiento actual)", () => {
     const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
     expect(text).toContain("Para recoger");
   });
+
+  it("congela el string completo del flujo cliente (sin opts)", () => {
+    const order = construirOrderLocal(baseInput);
+    const expectedMsg =
+      `Pedido Lobo Burger - #${order.id}\n\n` +
+      `Cliente: Juan Perez\n` +
+      `Telefono: 987654321\n` +
+      `Delivery a: Av. Los Heroes 123\n\n` +
+      `- 2x Miami Night - S/36.00\n` +
+      `- 1x Salchipapa Clasica - S/10.00\n\n` +
+      `Total: S/46.00`;
+    const expectedUrl = `https://wa.me/51974983862?text=${encodeURIComponent(expectedMsg)}`;
+    expect(buildWhatsAppUrl(order)).toBe(expectedUrl);
+  });
+
+  it("buildWhatsAppUrl(order, {}) es identico a buildWhatsAppUrl(order)", () => {
+    const order = construirOrderLocal(baseInput);
+    expect(buildWhatsAppUrl(order, {})).toBe(buildWhatsAppUrl(order));
+  });
+
+  it("con opts.to cambia solo el host del link, el texto decodificado es identico al default", () => {
+    const order = construirOrderLocal(baseInput);
+    const defaultUrl = buildWhatsAppUrl(order);
+    const forwardedUrl = buildWhatsAppUrl(order, { to: "51923368745" });
+    expect(forwardedUrl.startsWith("https://wa.me/51923368745?text=")).toBe(true);
+    const defaultText = decodeURIComponent(defaultUrl.split("?text=")[1]);
+    const forwardedText = decodeURIComponent(forwardedUrl.split("?text=")[1]);
+    expect(forwardedText).toBe(defaultText);
+  });
+
+  it("con includeGps:true y lat/lng agrega la linea GPS sin cambiar el resto del texto", () => {
+    const orderSinGps = construirOrderLocal(baseInput);
+    const orderConLatLng = { ...orderSinGps, lat: -12.046374, lng: -77.042793 };
+    const textoSinGps = decodeURIComponent(buildWhatsAppUrl(orderSinGps).split("?text=")[1]);
+    const textoConGps = decodeURIComponent(buildWhatsAppUrl(orderConLatLng, { includeGps: true }).split("?text=")[1]);
+    expect(textoConGps).toBe(textoSinGps.replace(
+      "Delivery a: Av. Los Heroes 123\n\n",
+      "Delivery a: Av. Los Heroes 123\nGPS: https://maps.google.com/?q=-12.046374,-77.042793\n\n"
+    ));
+  });
+
+  it("con includeGps:true pero sin lat/lng no agrega 'GPS:' ni 'undefined'", () => {
+    const order = construirOrderLocal(baseInput);
+    const text = decodeURIComponent(buildWhatsAppUrl(order, { includeGps: true }).split("?text=")[1]);
+    expect(text).not.toContain("GPS:");
+    expect(text).not.toContain("undefined");
+  });
+
+  it("sin opts, un pedido con lat/lng no incluye 'GPS:'", () => {
+    const orderSinGps = construirOrderLocal(baseInput);
+    const orderConLatLng = { ...orderSinGps, lat: -12.046374, lng: -77.042793 };
+    const text = decodeURIComponent(buildWhatsAppUrl(orderConLatLng).split("?text=")[1]);
+    expect(text).not.toContain("GPS:");
+  });
+
+  it("mantiene el formato ' (Ají, Tártara)' para items con cremas", () => {
+    const order = construirOrderLocal({
+      ...baseInput,
+      items: [{ id: 1, name: "Miami Night", price: 18, qty: 1, cremas: ["Ají", "Tártara"] }],
+      total: 18,
+    });
+    const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
+    expect(text).toContain("1x Miami Night (Ají, Tártara) - S/18");
+  });
 });
