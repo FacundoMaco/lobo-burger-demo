@@ -136,7 +136,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           tokenId: tokenRes.tokenId,
           email: email.trim(),
-          items: items.map(i => ({ id: i.id, qty: i.qty })),
+          items: items.map(i => ({ id: i.id, qty: i.qty, cremas: i.cremas })),
           name: name.trim(),
           phone: phone.trim(),
           delivery: fulfillmentMode === "delivery",
@@ -181,7 +181,7 @@ export default function CheckoutPage() {
       containerId: CULQI_CONTAINER_ID,
       allowYape: false, // Solo tarjeta: no genera orden ni correos de PagoEfectivo
       pedido: {
-        items: items.map(i => ({ id: i.id, qty: i.qty })),
+        items: items.map(i => ({ id: i.id, qty: i.qty, cremas: i.cremas })),
         name: name.trim(),
         phone: phone.trim(),
         delivery: fulfillmentMode === "delivery",
@@ -294,9 +294,14 @@ export default function CheckoutPage() {
         <div className="rounded-2xl p-5 mb-5" style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,28,0.1)" }}>
           <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "rgba(36,31,28,0.5)" }}>Resumen</p>
           {items.map(item => (
-            <div key={item.id} className="flex justify-between text-sm py-1.5" style={{ borderBottom: "1px solid rgba(36,31,28,0.06)" }}>
-              <span style={{ color: INK }}>{item.qty}x {item.name}</span>
-              <span className="font-mono font-semibold" style={{ color: INK }}>S/{item.price * item.qty}</span>
+            <div key={item.id} className="py-1.5" style={{ borderBottom: "1px solid rgba(36,31,28,0.06)" }}>
+              <div className="flex justify-between text-sm">
+                <span style={{ color: INK }}>{item.qty}x {item.name}</span>
+                <span className="font-mono font-semibold" style={{ color: INK }}>S/{item.price * item.qty}</span>
+              </div>
+              {item.cremas && item.cremas.length > 0 && (
+                <p className="text-[11px] pl-3" style={{ color: "rgba(36,31,28,0.5)" }}>Cremas: {item.cremas.join(", ")}</p>
+              )}
             </div>
           ))}
           <div className="flex justify-between items-center pt-3 mt-1">

@@ -98,6 +98,25 @@ function minutesAgo(iso: string): number {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
 }
 
+// Reenvio manual del pedido al numero de Jaime (923368745), que el luego
+// pasa a su motorizado. wa.me solo abre el chat con el texto listo -- un
+// envio automatico real requeriria API de WhatsApp Business (Twilio/Meta),
+// fuera de alcance para hoy.
+const DELIVERY_FORWARD_NUMBER = "51923368745";
+function buildDeliveryForwardUrl(o: Order): string {
+  const lines = o.items.map(i => `- ${i.qty}x ${i.name}`).join("\n");
+  const gpsLine = o.lat != null && o.lng != null
+    ? `\nGPS: https://maps.google.com/?q=${o.lat},${o.lng}`
+    : "";
+  const msg =
+    `Pedido #${o.id} - LOBO BURGER\n\n` +
+    `Cliente: ${o.name}\n` +
+    `Telefono: ${o.phone}\n` +
+    `Direccion: ${o.address}${gpsLine}\n\n` +
+    `${lines}\n\nTotal: ${formatPrice(o.total)}`;
+  return `https://wa.me/${DELIVERY_FORWARD_NUMBER}?text=${encodeURIComponent(msg)}`;
+}
+
 // ─── ValidarTab ───────────────────────────────────────────────────────────────
 
 type Toast = { ok: boolean; text: string };
@@ -461,6 +480,8 @@ export default function AdminPage() {
         email: p.cliente_email as string,
         delivery: p.delivery as boolean,
         address: (p.direccion as string) ?? "",
+        lat: typeof p.lat === "number" ? p.lat : undefined,
+        lng: typeof p.lng === "number" ? p.lng : undefined,
         items: p.items as Order["items"],
         total: (p.total_centimos as number) / 100,
         status: p.estado as OrderStatus,
@@ -554,6 +575,18 @@ export default function AdminPage() {
   const todayTotal  = todayOrders.reduce((s, o) => s + o.total, 0);
   const pending     = orders.filter(o => o.status === "pendiente").length;
 
+  // Timbre persistente (pedido de Jaime): mientras haya al menos un pedido
+  // "pendiente" el sonido se repite, no un solo beep que se pierde con el
+  // ruido de cocina. Deja de sonar recien cuando el pedido pasa de estado
+  // (confirmado / en preparacion), nunca por timeout.
+  useEffect(() => {
+    if (pending === 0 || !audioEnabled) return;
+    const loop = setInterval(() => {
+      if (audioEnabledRef.current) playOrderChime();
+    }, 2500);
+    return () => clearInterval(loop);
+  }, [pending, audioEnabled]);
+
   const navItems: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "dashboard", label: "Dashboard",  icon: LayoutDashboard },
     { id: "pedidos",   label: "Pedidos",    icon: ShoppingBag     },
@@ -641,13 +674,18 @@ export default function AdminPage() {
           {/* Lista de Items */}
           <div className="mb-3 space-y-1">
             {o.items.map((item, i) => (
-              <p key={i} className="text-xs flex items-baseline">
-                <span className="font-bold font-mono mr-1.5" style={{ color: YELLOW }}>{item.qty}x</span>
-                <span className="text-neutral-200">{item.name}</span>
-                <span className="ml-auto font-mono text-[11px]" style={{ color: "#555" }}>
-                  {formatPrice(item.price * item.qty)}
-                </span>
-              </p>
+              <div key={i}>
+                <p className="text-xs flex items-baseline">
+                  <span className="font-bold font-mono mr-1.5" style={{ color: YELLOW }}>{item.qty}x</span>
+                  <span className="text-neutral-200">{item.name}</span>
+                  <span className="ml-auto font-mono text-[11px]" style={{ color: "#555" }}>
+                    {formatPrice(item.price * item.qty)}
+                  </span>
+                </p>
+                {item.cremas && item.cremas.length > 0 && (
+                  <p className="text-[10px] pl-5" style={{ color: "#888" }}>Cremas: {item.cremas.join(", ")}</p>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -676,6 +714,21 @@ export default function AdminPage() {
             <Printer size={13} className="text-yellow-400" />
             <span>Imprimir Comanda (80mm)</span>
           </button>
+
+          {/* Botón Reenviar a Delivery (WhatsApp al numero de Jaime) */}
+          {o.delivery && (
+            <a
+              href={buildDeliveryForwardUrl(o)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="w-full flex items-center justify-center gap-1.5 py-2 mb-2 rounded-lg text-[11px] font-bold text-emerald-400 hover:text-white bg-neutral-900 hover:bg-emerald-900/40 border border-emerald-900/60 hover:border-emerald-700 transition-colors"
+              title="Reenviar contacto, direccion y GPS al delivery por WhatsApp"
+            >
+              <ExternalLink size={13} />
+              <span>Reenviar a Delivery</span>
+            </a>
+          )}
 
           {cfg.next ? (
             <button

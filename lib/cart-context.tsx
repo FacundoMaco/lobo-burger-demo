@@ -10,6 +10,7 @@ export type CartItem = {
   name: string;
   price: number;
   qty: number;
+  cremas?: string[];
 };
 
 export type FulfillmentMode = "pickup" | "delivery" | null;
@@ -36,7 +37,10 @@ const CartContext = createContext<CartContextType | null>(null);
 const WHATSAPP_NUMBER = "51974983862";
 
 export function buildWhatsAppUrl(order: Order): string {
-  const lines = order.items.map(i => `- ${i.qty}x ${i.name} - ${formatPrice(i.price * i.qty)}`).join("\n");
+  const lines = order.items.map(i => {
+    const cremas = i.cremas?.length ? ` (${i.cremas.join(", ")})` : "";
+    return `- ${i.qty}x ${i.name}${cremas} - ${formatPrice(i.price * i.qty)}`;
+  }).join("\n");
   const deliveryLine = order.delivery ? `Delivery a: ${order.address}` : "Para recoger";
   const msg = `Pedido Lobo Burger - #${order.id}\n\nCliente: ${order.name}\nTelefono: ${order.phone}\n${deliveryLine}\n\n${lines}\n\nTotal: ${formatPrice(order.total)}`;
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
@@ -104,7 +108,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const submitOrder = (data: { name: string; phone: string; email?: string; culqiChargeId?: string; delivery: boolean; address: string }): Order => {
     const order = construirOrderLocal({
       ...data,
-      items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, cremas: i.cremas })),
       total,
     });
     clear();

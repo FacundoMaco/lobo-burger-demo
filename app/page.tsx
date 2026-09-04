@@ -9,7 +9,7 @@ import { LocationBar } from "@/components/location-bar";
 import { PromoSlider, type HeroPromo } from "@/components/promo-slider";
 import { CheeseDrip } from "@/components/cheese-drip";
 import { Plus, Minus, Check, Phone, Clock, Bike, MapPin, BookText } from "lucide-react";
-import { MENU_ITEMS as menuItems, CATEGORIES as categories, type MenuItem } from "@/lib/menu";
+import { MENU_ITEMS as menuItems, CATEGORIES as categories, type MenuItem, CATEGORIAS_CON_CREMAS, CREMAS_OPCIONES, CREMAS_MAX } from "@/lib/menu";
 
 const BG = "#FFFDF8";
 const PRIMARY = "#F5A623";
@@ -65,12 +65,33 @@ function ItemBadge({ text }: { text: string }) {
 function MenuCard({ item }: { item: MenuItem }) {
   const { add, update, items } = useCart();
   const [added, setAdded] = useState(false);
+  const [pickingCremas, setPickingCremas] = useState(false);
+  const [cremas, setCremas] = useState<string[]>([]);
   const inCart = items.find(i => i.id === item.id);
+  const llevaCremas = CATEGORIAS_CON_CREMAS.includes(item.category);
+
+  const confirmAdd = (cremasElegidas?: string[]) => {
+    add({ id: item.id, name: item.name, price: item.price, cremas: cremasElegidas?.length ? cremasElegidas : undefined });
+    setAdded(true);
+    setPickingCremas(false);
+    setCremas([]);
+    setTimeout(() => setAdded(false), 900);
+  };
 
   const handleAdd = () => {
-    add({ id: item.id, name: item.name, price: item.price });
-    setAdded(true);
-    setTimeout(() => setAdded(false), 900);
+    if (llevaCremas && !inCart) {
+      setPickingCremas(true);
+      return;
+    }
+    confirmAdd();
+  };
+
+  const toggleCrema = (c: string) => {
+    setCremas(prev => {
+      if (prev.includes(c)) return prev.filter(x => x !== c);
+      if (prev.length >= CREMAS_MAX) return prev;
+      return [...prev, c];
+    });
   };
 
   return (
@@ -153,6 +174,48 @@ function MenuCard({ item }: { item: MenuItem }) {
             </button>
           )}
         </div>
+
+        {pickingCremas && (
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(36,31,28,0.07)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(36,31,28,0.6)" }}>
+              Cremas (max {CREMAS_MAX})
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-2.5">
+              {CREMAS_OPCIONES.map(c => {
+                const selected = cremas.includes(c);
+                return (
+                  <button
+                    key={c}
+                    onClick={() => toggleCrema(c)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer"
+                    style={{
+                      background: selected ? PRIMARY : "rgba(36,31,28,0.06)",
+                      color: selected ? INK : "rgba(36,31,28,0.65)",
+                    }}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setPickingCremas(false); setCremas([]); }}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase"
+                style={{ background: "rgba(36,31,28,0.08)", color: INK }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => confirmAdd(cremas)}
+                className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase"
+                style={{ background: PRIMARY, color: INK }}
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

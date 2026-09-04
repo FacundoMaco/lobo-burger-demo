@@ -20,6 +20,11 @@ export type MenuItem = {
 
 export const CATEGORIES = ["Combos", "Burgers", "Pollo", "Complementos", "Bebidas"];
 
+// Categorias que llevan comanda con eleccion de cremas (max CREMAS_MAX).
+export const CATEGORIAS_CON_CREMAS = ["Combos", "Burgers", "Pollo", "Complementos"];
+export const CREMAS_OPCIONES = ["Mayonesa", "Mostaza", "Ketchup", "Ají", "Golf", "Aceituna", "Tártara"];
+export const CREMAS_MAX = 3;
+
 // Precios por confirmar con la carta oficial de Jaime.
 export const MENU_ITEMS: MenuItem[] = [
   { id: 13, category: "Combos",       name: "Combo Lobo",            description: "Burger de la casa + Salchipapa Clasica + Gaseosa.",                        price: 25, badge: "AHORRA S/8",  originalPrice: 33,   image: "/images/menu/a.webp",                     agotado: false },

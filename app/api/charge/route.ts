@@ -8,6 +8,7 @@ import * as Sentry from "@sentry/nextjs";
 // NOTA DE MANTENIMIENTO: Este archivo y app/api/culqi/order/route.ts duplican el
 // cálculo del total a propósito y deben mantenerse en sync a mano.
 import { getMenuItemLive } from "@/lib/menu-data";
+import { CREMAS_OPCIONES, CREMAS_MAX } from "@/lib/menu";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { alertaTelegram } from "@/lib/alertas";
 import { validarEmail, validarTelefono } from "@/lib/validacion";
@@ -17,7 +18,7 @@ const MIN_CENTS = 300; // minimo que acepta Culqi
 const MAX_CENTS = 50000; // techo sano para un pedido web
 const MAX_QTY = 20; // por item, para que un pedido absurdo no pase
 
-type ItemPedido = { id: number; qty: number };
+type ItemPedido = { id: number; qty: number; cremas?: string[] };
 
 type Cuerpo = {
   tokenId?: string;
@@ -98,13 +99,20 @@ export async function POST(request: Request) {
 
   // ── Total calculado en el servidor (leído en vivo de Postgres sin caché) ──
   let totalCents = 0;
-  const detalle: { id: number; name: string; price: number; qty: number }[] = [];
+  const detalle: { id: number; name: string; price: number; qty: number; cremas?: string[] }[] = [];
   for (const linea of items) {
     if (!Number.isInteger(linea?.id) || !Number.isInteger(linea?.qty)) {
       return Response.json({ error: "Datos del pedido inválidos" }, { status: 400 });
     }
     if (linea.qty < 1 || linea.qty > MAX_QTY) {
       return Response.json({ error: "Cantidad no permitida" }, { status: 400 });
+    }
+    let cremas: string[] | undefined;
+    if (linea.cremas !== undefined) {
+      if (!Array.isArray(linea.cremas) || linea.cremas.length > CREMAS_MAX || !linea.cremas.every(c => CREMAS_OPCIONES.includes(c))) {
+        return Response.json({ error: "Cremas inválidas" }, { status: 400 });
+      }
+      cremas = linea.cremas;
     }
     const item = await getMenuItemLive(linea.id);
     if (!item) {
@@ -114,7 +122,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Un producto de tu pedido ya no está disponible" }, { status: 400 });
     }
     totalCents += item.precio_centimos * linea.qty;
-    detalle.push({ id: item.id, name: item.name, price: item.precio_centimos / 100, qty: linea.qty });
+    detalle.push({ id: item.id, name: item.name, price: item.precio_centimos / 100, qty: linea.qty, ...(cremas?.length ? { cremas } : {}) });
   }
 
   if (totalCents < MIN_CENTS || totalCents > MAX_CENTS) {

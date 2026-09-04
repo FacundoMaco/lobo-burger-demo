@@ -21,7 +21,8 @@ export function formatTicketText(o: Order): string {
     .map(it => {
       const name = it.name.length > 17 ? it.name.slice(0, 16) + "." : it.name.padEnd(17);
       const subtotal = formatPrice(it.price * it.qty).padStart(8);
-      return `${it.qty}x ${name} ${subtotal}`;
+      const linea = `${it.qty}x ${name} ${subtotal}`;
+      return it.cremas?.length ? `${linea}\n   Cremas: ${it.cremas.join(", ")}` : linea;
     })
     .join("\n");
 
@@ -101,13 +102,20 @@ export function ThermalPrintArea({ order }: { order: Order | null }) {
           <span>SUBTOTAL</span>
         </div>
         {order.items.map((it, idx) => (
-          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "15px", fontWeight: "800", marginBottom: "5px", lineHeight: "1.2" }}>
-            <span style={{ paddingRight: "6px" }}>
-              <strong>{it.qty}x</strong> {it.name}
-            </span>
-            <span style={{ whiteSpace: "nowrap" }}>
-              {formatPrice(it.price * it.qty)}
-            </span>
+          <div key={idx} style={{ marginBottom: "5px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "15px", fontWeight: "800", lineHeight: "1.2" }}>
+              <span style={{ paddingRight: "6px" }}>
+                <strong>{it.qty}x</strong> {it.name}
+              </span>
+              <span style={{ whiteSpace: "nowrap" }}>
+                {formatPrice(it.price * it.qty)}
+              </span>
+            </div>
+            {it.cremas && it.cremas.length > 0 && (
+              <div style={{ fontSize: "12px", fontWeight: "700", paddingLeft: "14px" }}>
+                Cremas: {it.cremas.join(", ")}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -232,11 +240,18 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
               </div>
               <div className="space-y-1.5 text-sm">
                 {order.items.map((it, idx) => (
-                  <div key={idx} className="flex justify-between items-start font-bold">
-                    <span className="pr-2 leading-tight">
-                      {it.qty}x {it.name}
-                    </span>
-                    <span className="shrink-0">{formatPrice(it.price * it.qty)}</span>
+                  <div key={idx}>
+                    <div className="flex justify-between items-start font-bold">
+                      <span className="pr-2 leading-tight">
+                        {it.qty}x {it.name}
+                      </span>
+                      <span className="shrink-0">{formatPrice(it.price * it.qty)}</span>
+                    </div>
+                    {it.cremas && it.cremas.length > 0 && (
+                      <div className="text-[10px] font-semibold text-neutral-600 pl-3">
+                        Cremas: {it.cremas.join(", ")}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

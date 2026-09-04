@@ -18,7 +18,9 @@ export type Order = {
   culqiChargeId?: string;
   delivery: boolean;
   address: string;
-  items: { id: number; name: string; price: number; qty: number }[];
+  lat?: number;
+  lng?: number;
+  items: { id: number; name: string; price: number; qty: number; cremas?: string[] }[];
   total: number;
   status: OrderStatus;
 };
