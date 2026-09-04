@@ -67,7 +67,8 @@ function MenuCard({ item }: { item: MenuItem }) {
   const [added, setAdded] = useState(false);
   const [pickingCremas, setPickingCremas] = useState(false);
   const [cremas, setCremas] = useState<string[]>([]);
-  const inCart = items.find(i => i.id === item.id);
+  const lineas = items.filter(i => i.id === item.id);
+  const enCarrito = lineas.reduce((s, l) => s + l.qty, 0);
   const llevaCremas = CATEGORIAS_CON_CREMAS.includes(item.category);
 
   const confirmAdd = (cremasElegidas?: string[]) => {
@@ -79,7 +80,7 @@ function MenuCard({ item }: { item: MenuItem }) {
   };
 
   const handleAdd = () => {
-    if (llevaCremas && !inCart) {
+    if (llevaCremas && enCarrito === 0) {
       setPickingCremas(true);
       return;
     }
@@ -99,8 +100,8 @@ function MenuCard({ item }: { item: MenuItem }) {
       className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-1"
       style={{
         background: "#FFFFFF",
-        border: `1px solid ${inCart ? "rgba(230,57,80,0.4)" : "rgba(36,31,28,0.1)"}`,
-        boxShadow: inCart ? "0 4px 20px rgba(230,57,80,0.12)" : "0 4px 16px rgba(36,31,28,0.07)",
+        border: `1px solid ${enCarrito > 0 ? "rgba(230,57,80,0.4)" : "rgba(36,31,28,0.1)"}`,
+        boxShadow: enCarrito > 0 ? "0 4px 20px rgba(230,57,80,0.12)" : "0 4px 16px rgba(36,31,28,0.07)",
       }}
     >
       <div className="relative w-full" style={{ paddingTop: "62%", background: placeholderColor(item.category) }}>
@@ -143,17 +144,17 @@ function MenuCard({ item }: { item: MenuItem }) {
             )}
           </div>
 
-          {inCart ? (
+          {enCarrito > 0 ? (
             <div className="flex items-center gap-1.5">
               <button
-                onClick={() => update(item.id, inCart.qty - 1)}
+                onClick={() => update(lineas[lineas.length - 1].lineId, lineas[lineas.length - 1].qty - 1)}
                 aria-label={`Restar ${item.name}`}
                 className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer active:scale-90 transition-transform"
                 style={{ background: "rgba(36,31,28,0.08)" }}
               >
                 <Minus size={13} style={{ color: INK }} />
               </button>
-              <span className="font-mono text-sm font-bold w-5 text-center" style={{ color: INK }}>{inCart.qty}</span>
+              <span className="font-mono text-sm font-bold w-5 text-center" style={{ color: INK }}>{enCarrito}</span>
               <button
                 onClick={handleAdd}
                 aria-label={`Sumar ${item.name}`}

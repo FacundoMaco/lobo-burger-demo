@@ -4,22 +4,18 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { formatPrice } from "@/lib/utils";
 import { construirOrderLocal } from "@/lib/orders-store";
 import type { Order } from "@/lib/orders-store";
+import { mergeIntoCart, normalizarLineas } from "@/lib/cart-line";
 
-export type CartItem = {
-  id: number;
-  name: string;
-  price: number;
-  qty: number;
-  cremas?: string[];
-};
+export type { CartItem } from "@/lib/cart-line";
+import type { CartItem } from "@/lib/cart-line";
 
 export type FulfillmentMode = "pickup" | "delivery" | null;
 
 type CartContextType = {
   items: CartItem[];
-  add: (item: Omit<CartItem, "qty">) => void;
-  remove: (id: number) => void;
-  update: (id: number, qty: number) => void;
+  add: (item: Omit<CartItem, "qty" | "lineId">) => void;
+  remove: (lineId: string) => void;
+  update: (lineId: string, qty: number) => void;
   total: number;
   count: number;
   clear: () => void;
@@ -62,7 +58,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (Array.isArray(saved.items)) setItems(saved.items);
+        if (Array.isArray(saved.items)) setItems(normalizarLineas(saved.items));
         if (saved.fulfillmentMode === "pickup" || saved.fulfillmentMode === "delivery") {
           setFulfillmentMode(saved.fulfillmentMode);
         }
@@ -86,19 +82,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, fulfillmentMode, address, hydrated]);
 
-  const add = (item: Omit<CartItem, "qty">) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.id === item.id);
-      if (existing) return prev.map((i) => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { ...item, qty: 1 }];
-    });
+  const add = (item: Omit<CartItem, "qty" | "lineId">) => {
+    setItems((prev) => mergeIntoCart(prev, item));
   };
 
-  const remove = (id: number) => setItems((prev) => prev.filter((i) => i.id !== id));
+  const remove = (lineId: string) => setItems((prev) => prev.filter((i) => i.lineId !== lineId));
 
-  const update = (id: number, qty: number) => {
-    if (qty <= 0) return remove(id);
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, qty } : i));
+  const update = (lineId: string, qty: number) => {
+    if (qty <= 0) return remove(lineId);
+    setItems((prev) => prev.map((i) => i.lineId === lineId ? { ...i, qty } : i));
   };
 
   const total = items.reduce((sum, i) => sum + i.price * i.qty, 0);

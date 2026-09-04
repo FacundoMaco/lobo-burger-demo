@@ -294,7 +294,7 @@ export default function CheckoutPage() {
         <div className="rounded-2xl p-5 mb-5" style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,28,0.1)" }}>
           <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "rgba(36,31,28,0.5)" }}>Resumen</p>
           {items.map(item => (
-            <div key={item.id} className="py-1.5" style={{ borderBottom: "1px solid rgba(36,31,28,0.06)" }}>
+            <div key={item.lineId} className="py-1.5" style={{ borderBottom: "1px solid rgba(36,31,28,0.06)" }}>
               <div className="flex justify-between text-sm">
                 <span style={{ color: INK }}>{item.qty}x {item.name}</span>
                 <span className="font-mono font-semibold" style={{ color: INK }}>S/{item.price * item.qty}</span>

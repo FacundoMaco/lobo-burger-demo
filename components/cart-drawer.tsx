@@ -62,7 +62,7 @@ export function CartDrawer() {
           ) : (
             items.map((item) => (
               <div
-                key={item.id}
+                key={item.lineId}
                 className="flex items-center gap-3 py-3"
                 style={{ borderBottom: "1px solid rgba(36,31,28,0.08)" }}
               >
@@ -71,10 +71,15 @@ export function CartDrawer() {
                   <p className="font-mono text-xs mt-0.5" style={{ color: "rgba(36,31,28,0.55)" }}>
                     S/{item.price} c/u
                   </p>
+                  {item.cremas && item.cremas.length > 0 && (
+                    <p className="font-mono text-xs mt-0.5" style={{ color: "rgba(36,31,28,0.55)" }}>
+                      Cremas: {item.cremas.join(", ")}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => update(item.id, item.qty - 1)}
+                    onClick={() => update(item.lineId, item.qty - 1)}
                     aria-label={`Restar ${item.name}`}
                     className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer"
                     style={{ background: "rgba(36,31,28,0.08)" }}
@@ -83,7 +88,7 @@ export function CartDrawer() {
                   </button>
                   <span className="text-sm font-bold w-5 text-center" style={{ color: INK }}>{item.qty}</span>
                   <button
-                    onClick={() => update(item.id, item.qty + 1)}
+                    onClick={() => update(item.lineId, item.qty + 1)}
                     aria-label={`Sumar ${item.name}`}
                     className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer"
                     style={{ background: "rgba(245,166,35,0.25)" }}
@@ -95,7 +100,7 @@ export function CartDrawer() {
                   S/{item.price * item.qty}
                 </span>
                 <button
-                  onClick={() => remove(item.id)}
+                  onClick={() => remove(item.lineId)}
                   aria-label={`Quitar ${item.name} del pedido`}
                   className="transition-colors ml-1 cursor-pointer"
                   style={{ color: "rgba(36,31,28,0.3)" }}
