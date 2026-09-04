@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 Phase: 01 (integridad-del-pago-y-red-de-seguridad) — EXECUTING
 Plan: 1 of 8
 Status: Executing Phase 01
-Last activity: 2026-09-02 - Completed quick task 260902-3pr: Restaurar build verde tras revisión de código
+Last activity: 2026-09-04 - Completed quick task 260904-7xt: Fix auto-print marcaba en_preparacion antes de imprimir
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -84,6 +84,7 @@ Ninguno registrado aún.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260902-3pr | Restaurar build verde tras revisión de código (use client, lib/menu.ts, admin KDS) | 2026-09-02 | 959ae91 | [260902-3pr-restaurar-build-verde-use-client-en-cart](./quick/260902-3pr-restaurar-build-verde-use-client-en-cart/) |
+| 260904-7xt | Fix: auto-print marcaba en_preparacion antes de imprimir realmente (race de estado) | 2026-09-04 | c40aa05 | [260904-7xt-fix-auto-print-marca-en-preparacion-ante](./quick/260904-7xt-fix-auto-print-marca-en-preparacion-ante/) |
 
 ## Deferred Items & Future Backlog
 
