@@ -8,7 +8,7 @@ import * as Sentry from "@sentry/nextjs";
 // NOTA DE MANTENIMIENTO: Este archivo y app/api/culqi/order/route.ts duplican el
 // cálculo del total a propósito y deben mantenerse en sync a mano.
 import { getMenuItemLive } from "@/lib/menu-data";
-import { CREMAS_OPCIONES, CREMAS_MAX } from "@/lib/menu";
+import { CREMAS_OPCIONES, CREMAS_MAX, categoriaAdmiteCremas } from "@/lib/menu";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { alertaTelegram } from "@/lib/alertas";
 import { validarEmail, validarTelefono } from "@/lib/validacion";
@@ -109,7 +109,12 @@ export async function POST(request: Request) {
     }
     let cremas: string[] | undefined;
     if (linea.cremas !== undefined) {
-      if (!Array.isArray(linea.cremas) || linea.cremas.length > CREMAS_MAX || !linea.cremas.every(c => CREMAS_OPCIONES.includes(c))) {
+      if (
+        !Array.isArray(linea.cremas) ||
+        linea.cremas.length > CREMAS_MAX ||
+        !linea.cremas.every(c => CREMAS_OPCIONES.includes(c)) ||
+        new Set(linea.cremas).size !== linea.cremas.length
+      ) {
         return Response.json({ error: "Cremas inválidas" }, { status: 400 });
       }
       cremas = linea.cremas;
@@ -120,6 +125,9 @@ export async function POST(request: Request) {
     }
     if (item.agotado) {
       return Response.json({ error: "Un producto de tu pedido ya no está disponible" }, { status: 400 });
+    }
+    if (cremas?.length && !categoriaAdmiteCremas(item.category)) {
+      return Response.json({ error: "Ese producto no lleva cremas" }, { status: 400 });
     }
     totalCents += item.precio_centimos * linea.qty;
     detalle.push({ id: item.id, name: item.name, price: item.precio_centimos / 100, qty: linea.qty, ...(cremas?.length ? { cremas } : {}) });
