@@ -21,7 +21,15 @@ export type MenuItem = {
 export const CATEGORIES = ["Combos", "Burgers", "Pollo", "Complementos", "Bebidas"];
 
 // Categorias que llevan comanda con eleccion de cremas (max CREMAS_MAX).
-export const CATEGORIAS_CON_CREMAS = ["Combos", "Burgers", "Pollo", "Complementos"];
+// Derivada de CATEGORIES por exclusion explicita: toda categoria nueva que se
+// agregue a CATEGORIES lleva cremas por defecto salvo que se sume aca. Es un
+// fail-open deliberado del lado cliente (solo afecta si se muestra el
+// selector de cremas); la validacion real de negocio vive en el server via
+// categoriaAdmiteCremas().
+const CATEGORIAS_ESTATICAS_SIN_CREMAS = ["Bebidas"];
+export const CATEGORIAS_CON_CREMAS = CATEGORIES.filter(
+  (c) => !CATEGORIAS_ESTATICAS_SIN_CREMAS.includes(c)
+);
 export const CREMAS_OPCIONES = ["Mayonesa", "Mostaza", "Ketchup", "Ají", "Golf", "Aceituna", "Tártara"];
 export const CREMAS_MAX = 3;
 

@@ -2,7 +2,7 @@
 // dentro de Vitest. Sin vite-tsconfig-paths, este import no resuelve y toda
 // la fase se cae -- por eso el import es via "@/lib/menu", nunca relativo.
 import { describe, expect, it } from "vitest";
-import { getMenuItem, MENU_ITEMS, CATEGORIAS_CON_CREMAS, categoriaAdmiteCremas } from "@/lib/menu";
+import { getMenuItem, MENU_ITEMS, CATEGORIES, CATEGORIAS_CON_CREMAS, categoriaAdmiteCremas } from "@/lib/menu";
 
 describe("lib/menu", () => {
   it("getMenuItem(1) devuelve Miami Night a S/18", () => {
@@ -20,6 +20,19 @@ describe("lib/menu", () => {
     // getMenuItem devuelva el item equivocado en el recalculo de precio.
     const ids = MENU_ITEMS.map((i) => i.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  describe("CATEGORIAS_CON_CREMAS", () => {
+    it("congela el valor exacto de las categorias con cremas", () => {
+      expect(CATEGORIAS_CON_CREMAS).toEqual(["Combos", "Burgers", "Pollo", "Complementos"]);
+    });
+
+    it("se deriva de CATEGORIES: toda categoria salvo Bebidas queda incluida", () => {
+      const excluidas = ["Bebidas"];
+      const esperadas = CATEGORIES.filter((c) => !excluidas.includes(c));
+      expect(CATEGORIAS_CON_CREMAS).toEqual(esperadas);
+      expect(CATEGORIAS_CON_CREMAS).not.toContain("Bebidas");
+    });
   });
 
   describe("categoriaAdmiteCremas", () => {
