@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
+import { buildWhatsAppUrl } from "@/lib/cart-context";
 import { scheduleAutoPrint, type AutoPrintHandle } from "@/lib/auto-print";
 import { persistOrderTransition } from "@/lib/order-transition";
 import { ThermalTicketModal, ThermalPrintArea, PrinterHelpModal } from "@/components/thermal-ticket";
@@ -105,19 +106,6 @@ function minutesAgo(iso: string): number {
 // envio automatico real requeriria API de WhatsApp Business (Twilio/Meta),
 // fuera de alcance para hoy.
 const DELIVERY_FORWARD_NUMBER = "51923368745";
-function buildDeliveryForwardUrl(o: Order): string {
-  const lines = o.items.map(i => `- ${i.qty}x ${i.name}${i.cremas?.length ? ` (Cremas: ${i.cremas.join(", ")})` : ""}`).join("\n");
-  const gpsLine = o.lat != null && o.lng != null
-    ? `\nGPS: https://maps.google.com/?q=${o.lat},${o.lng}`
-    : "";
-  const msg =
-    `Pedido #${o.id} - LOBO BURGER\n\n` +
-    `Cliente: ${o.name}\n` +
-    `Telefono: ${o.phone}\n` +
-    `Direccion: ${o.address}${gpsLine}\n\n` +
-    `${lines}\n\nTotal: ${formatPrice(o.total)}`;
-  return `https://wa.me/${DELIVERY_FORWARD_NUMBER}?text=${encodeURIComponent(msg)}`;
-}
 
 // ─── ValidarTab ───────────────────────────────────────────────────────────────
 
@@ -778,7 +766,7 @@ export default function AdminPage() {
           {/* Botón Reenviar a Delivery (WhatsApp al numero de Jaime) */}
           {o.delivery && (
             <a
-              href={buildDeliveryForwardUrl(o)}
+              href={buildWhatsAppUrl(o, { to: DELIVERY_FORWARD_NUMBER, includeGps: true })}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
