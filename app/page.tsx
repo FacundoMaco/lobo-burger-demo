@@ -79,8 +79,12 @@ function MenuCard({ item }: { item: MenuItem }) {
     setTimeout(() => setAdded(false), 900);
   };
 
+  // Sin guard de "ya esta en el carrito": cada unidad de un producto con
+  // cremas se pregunta aparte. Antes, la segunda unidad heredaba en silencio
+  // las cremas de la primera y la comanda imprimia "2x ... Cremas: X, Y" sin
+  // que el cliente lo hubiera elegido para esa unidad.
   const handleAdd = () => {
-    if (llevaCremas && enCarrito === 0) {
+    if (llevaCremas) {
       setPickingCremas(true);
       return;
     }
@@ -179,7 +183,7 @@ function MenuCard({ item }: { item: MenuItem }) {
         {pickingCremas && (
           <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(36,31,28,0.07)" }}>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(36,31,28,0.6)" }}>
-              Cremas (max {CREMAS_MAX})
+              {enCarrito > 0 ? `Cremas para la unidad #${enCarrito + 1} (max ${CREMAS_MAX})` : `Cremas (max ${CREMAS_MAX})`}
             </p>
             <div className="flex flex-wrap gap-1.5 mb-2.5">
               {CREMAS_OPCIONES.map(c => {
