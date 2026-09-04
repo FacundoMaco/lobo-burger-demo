@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Order, OrderStatus } from "@/lib/orders-store";
 import { buildWhatsAppUrl } from "@/lib/cart-context";
 import { scheduleAutoPrint, type AutoPrintHandle } from "@/lib/auto-print";
+import { createChimeGate } from "@/lib/chime-gate";
 import { persistOrderTransition } from "@/lib/order-transition";
 import { ThermalTicketModal, ThermalPrintArea, PrinterHelpModal } from "@/components/thermal-ticket";
 import { Sparkles,
@@ -62,7 +63,12 @@ function isToday(iso: string): boolean {
 
 // Singleton AudioContext para evitar fugas de recursos en el monitor de cocina
 let globalAudioCtx: AudioContext | null = null;
+// Gate compartido entre los tres emisores (polling, interval del timbre
+// persistente, simulacion) para que el chime inmediato de un pedido entrante
+// nunca solape con un tick del timbre persistente en un doble beep.
+const chimeGate = createChimeGate();
 function playOrderChime() {
+  if (!chimeGate.shouldPlay(Date.now())) return;
   try {
     if (!globalAudioCtx) {
       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -626,7 +632,10 @@ export default function AdminPage() {
   // Timbre persistente (pedido de Jaime): mientras haya al menos un pedido
   // "pendiente" el sonido se repite, no un solo beep que se pierde con el
   // ruido de cocina. Deja de sonar recien cuando el pedido pasa de estado
-  // (confirmado / en preparacion), nunca por timeout.
+  // (confirmado / en preparacion), nunca por timeout. Los chimes pasan por
+  // chimeGate, asi que un tick que cae a menos de CHIME_MIN_GAP_MS del chime
+  // inmediato de un pedido entrante se omite; la repeticion efectiva queda
+  // en <=2.5s.
   useEffect(() => {
     if (pending === 0 || !audioEnabled) return;
     const loop = setInterval(() => {
@@ -1134,7 +1143,10 @@ export default function AdminPage() {
                     onClick={() => {
                       const next = !audioEnabled;
                       setAudioEnabled(next);
-                      if (next) playOrderChime();
+                      if (next) {
+                        chimeGate.reset();
+                        playOrderChime();
+                      }
                     }}
                     className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors"
                     style={{ background: "#141414", border: "1px solid #222", color: audioEnabled ? "#2ecc71" : "#666" }}
