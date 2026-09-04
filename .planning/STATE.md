@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 Phase: 01 (integridad-del-pago-y-red-de-seguridad) — EXECUTING
 Plan: 1 of 8
 Status: Executing Phase 01
-Last activity: 2026-09-04 - Completed quick task 260904-9po: Fix validacion server de cremas (categoria + duplicados)
+Last activity: 2026-09-04 - Completed quick task 260904-9uy: Unificar buildWhatsAppUrl/buildDeliveryForwardUrl duplicados
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -92,6 +92,7 @@ Ninguno registrado aún.
 | 260904-8d1 | Fix: repetir item con cremas no reabria selector, segunda unidad heredaba cremas en silencio | 2026-09-04 | eb0c118 | [260904-8d1-fix-en-app-page-tsx-tocar-el-boton-en-un](./quick/260904-8d1-fix-en-app-page-tsx-tocar-el-boton-en-un/) |
 | 260904-9lv | Fix: batches de auto-print se acumulaban sin cancelar el anterior; cancel() libera pedidos no impresos para reintento | 2026-09-04 | 861dacf | [260904-9lv-fix-los-settimeout-escalonados-de-auto-p](./quick/260904-9lv-fix-los-settimeout-escalonados-de-auto-p/) |
 | 260904-9po | Fix: /api/charge no validaba categoria cremas-eligible ni duplicados; categoriaAdmiteCremas() deny-list (taxonomias de categoria de lib/menu.ts y la tabla menu_items en vivo no se intersectan) | 2026-09-04 | 7d1cca5 | [260904-9po-fix-en-app-api-charge-route-ts-la-valida](./quick/260904-9po-fix-en-app-api-charge-route-ts-la-valida/) |
+| 260904-9uy | Fix: buildDeliveryForwardUrl duplicaba buildWhatsAppUrl con templates que divergian; unificado con opts {to, includeGps}, freeze test del mensaje real de cliente | 2026-09-04 | d3d5e3e | [260904-9uy-fix-builddeliveryforwardurl-en-app-admin](./quick/260904-9uy-fix-builddeliveryforwardurl-en-app-admin/) |
 
 ## Deferred Items & Future Backlog
 
