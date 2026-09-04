@@ -6,20 +6,25 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 
 const ESTADOS = ["pendiente", "en_preparacion", "listo", "entregado", "cancelado"];
 
+interface SimulatedOrder {
+  codigo: string;
+  [key: string]: unknown;
+}
+
 // Almacén en memoria de pedidos simulados para que no se borren si Supabase está offline
-const simulatedOrdersStore: Record<string, any>[] = [];
+const simulatedOrdersStore: SimulatedOrder[] = [];
 
 
 export async function GET() {
   try {
-    const { data, error } = await getSupabaseAdmin()
+    const { data } = await getSupabaseAdmin()
       .from("pedidos")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(200);
 
     const dbOrders = data ?? [];
-    const dbCodes = new Set(dbOrders.map((d: any) => d.codigo));
+    const dbCodes = new Set(dbOrders.map((d: { codigo?: string }) => d.codigo));
     const activeSimulated = simulatedOrdersStore.filter(s => !dbCodes.has(s.codigo));
     return Response.json({ pedidos: [...activeSimulated, ...dbOrders] });
   } catch (e) {
