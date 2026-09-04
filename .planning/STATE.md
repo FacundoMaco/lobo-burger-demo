@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 Phase: 01 (integridad-del-pago-y-red-de-seguridad) — EXECUTING
 Plan: 1 of 8
 Status: Executing Phase 01
-Last activity: 2026-09-04 - Completed quick task 260904-8d1: Fix cremas no se re-preguntan al repetir item
+Last activity: 2026-09-04 - Completed quick task 260904-9lv: Fix batches de auto-print sin cancelar el anterior
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -89,6 +89,7 @@ Ninguno registrado aún.
 | 260904-7xt | Fix: auto-print marcaba en_preparacion antes de imprimir realmente (race de estado) | 2026-09-04 | c40aa05 | [260904-7xt-fix-auto-print-marca-en-preparacion-ante](./quick/260904-7xt-fix-auto-print-marca-en-preparacion-ante/) |
 | 260904-83o | Fix: PATCH de en_preparacion fire-and-forget sin retry, pedido quedaba huerfano en pendiente | 2026-09-04 | d52fcf6 | [260904-83o-fix-patch-de-transicion-a-en-preparacion](./quick/260904-83o-fix-patch-de-transicion-a-en-preparacion/) |
 | 260904-8d1 | Fix: repetir item con cremas no reabria selector, segunda unidad heredaba cremas en silencio | 2026-09-04 | eb0c118 | [260904-8d1-fix-en-app-page-tsx-tocar-el-boton-en-un](./quick/260904-8d1-fix-en-app-page-tsx-tocar-el-boton-en-un/) |
+| 260904-9lv | Fix: batches de auto-print se acumulaban sin cancelar el anterior; cancel() libera pedidos no impresos para reintento | 2026-09-04 | 861dacf | [260904-9lv-fix-los-settimeout-escalonados-de-auto-p](./quick/260904-9lv-fix-los-settimeout-escalonados-de-auto-p/) |
 
 ## Deferred Items & Future Backlog
 
