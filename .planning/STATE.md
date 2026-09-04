@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 Phase: 01 (integridad-del-pago-y-red-de-seguridad) — EXECUTING
 Plan: 1 of 8
 Status: Executing Phase 01
-Last activity: 2026-09-04 - Completed quick task 260904-7xt: Fix auto-print marcaba en_preparacion antes de imprimir
+Last activity: 2026-09-04 - Completed quick task 260904-83o: Fix PATCH sin retry en transicion a en_preparacion
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -78,6 +78,7 @@ Ninguno registrado aún.
 - General: producción cobra plata real hoy — ningún cambio de fase puede dejar el checkout roto durante el despliegue.
 - [Fase 2] El plan 02-01 dejó el build roto a propósito ("quedan rotos a nivel de import hasta el plan 02-02, es esperado"). Se revirtió en el quick task 260902-3pr. La premisa queda anulada por el Guardrail 1: cero builds rotos entre tareas.
 - [Fase 2] `/api/admin/puntos` y `/api/admin/canjear` no existen. El KDS táctil de `app/admin/page.tsx` que los consume está en cuarentena en `.context/kds-admin-page.tsx.bak` hasta que 02-02 cierre esas rutas.
+- La baseline de lint documentada en AGENTS.md ("3 errores react-hooks/set-state-in-effect") está desactualizada: la baseline real medida en 2026-09-04 es 5 problemas (los 3 originales + 2 `no-explicit-any` y 1 `no-unused-vars` en `app/api/admin/pedidos/route.ts`, preexistentes, no introducidos por los quick tasks 260904-*). AGENTS.md debería actualizarse.
 
 ### Quick Tasks Completed
 
@@ -85,6 +86,7 @@ Ninguno registrado aún.
 |---|-------------|------|--------|-----------|
 | 260902-3pr | Restaurar build verde tras revisión de código (use client, lib/menu.ts, admin KDS) | 2026-09-02 | 959ae91 | [260902-3pr-restaurar-build-verde-use-client-en-cart](./quick/260902-3pr-restaurar-build-verde-use-client-en-cart/) |
 | 260904-7xt | Fix: auto-print marcaba en_preparacion antes de imprimir realmente (race de estado) | 2026-09-04 | c40aa05 | [260904-7xt-fix-auto-print-marca-en-preparacion-ante](./quick/260904-7xt-fix-auto-print-marca-en-preparacion-ante/) |
+| 260904-83o | Fix: PATCH de en_preparacion fire-and-forget sin retry, pedido quedaba huerfano en pendiente | 2026-09-04 | d52fcf6 | [260904-83o-fix-patch-de-transicion-a-en-preparacion](./quick/260904-83o-fix-patch-de-transicion-a-en-preparacion/) |
 
 ## Deferred Items & Future Backlog
 
