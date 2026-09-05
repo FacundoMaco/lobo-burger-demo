@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     // Body opcional
   }
 
-  const codigo = body.codigo || `LB-${Math.floor(1000 + Math.random() * 9000)}`;
+  const codigo = body.codigo || `LB-SIM-${Date.now().toString(36).toUpperCase()}`;
   const simPedido = {
     codigo,
     cliente_nombre: body.name || "Jaime Lobo (Simulación)",

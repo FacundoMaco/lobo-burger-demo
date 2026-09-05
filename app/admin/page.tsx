@@ -380,7 +380,11 @@ export default function AdminPage() {
 
   // Función para simular un pedido entrante en vivo (prueba de timbre y ticketera)
   const handleSimularPedido = async () => {
-    const simCode = `LB-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Prefijo LB-SIM- (en vez de LB-<4 digitos>) para que nunca choque con un
+    // codigo real (que usa el mismo esquema de timestamp en base36, sin este
+    // prefijo) y para que el filtro `id.startsWith("LB-SIM")` de refresh()
+    // — mas abajo — deje de ser un chequeo muerto.
+    const simCode = `LB-SIM-${Date.now().toString(36).toUpperCase()}`;
     const simOrder: Order = {
       id: simCode,
       createdAt: new Date().toISOString(),
@@ -414,12 +418,25 @@ export default function AdminPage() {
       window.print();
     }, 400);
 
-    // 5. Guardar en base de datos si está disponible
+    // 5. Guardar en base de datos si está disponible. Los nombres de campo
+    // deben calzar con lo que espera POST /api/admin/pedidos (codigo,
+    // cliente_*, direccion, total_centimos) — si no, el servidor genera su
+    // propio codigo al azar, distinto al que ya se muestra en el KDS, y esa
+    // fila "fantasma" vuelve a entrar por el polling como pedido nuevo.
     try {
       await fetch("/api/admin/pedidos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(simOrder),
+        body: JSON.stringify({
+          codigo: simOrder.id,
+          name: simOrder.name,
+          phone: simOrder.phone,
+          email: simOrder.email,
+          delivery: simOrder.delivery,
+          address: simOrder.address,
+          items: simOrder.items,
+          total_centimos: Math.round(simOrder.total * 100),
+        }),
       });
     } catch {
       // Ignorar si está offline
