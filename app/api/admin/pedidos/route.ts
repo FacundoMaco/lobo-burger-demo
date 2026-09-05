@@ -81,6 +81,12 @@ export async function POST(request: Request) {
 
   const codigo = body.codigo || `LB-SIM-${Date.now().toString(36).toUpperCase()}`;
   const simPedido = {
+    // pedidos.culqi_charge_id es NOT NULL UNIQUE: sin este campo el insert
+    // siempre fallaba (silencioso, atrapado mas abajo) y el pedido quedaba
+    // viviendo solo en simulatedOrdersStore con estado "pendiente" congelado
+    // para siempre -- el PATCH de "A LA PLANCHA" nunca encontraba fila que
+    // actualizar y el siguiente refresh() pisaba el estado optimista.
+    culqi_charge_id: `sim_${codigo}`,
     codigo,
     cliente_nombre: body.name || "Jaime Lobo (Simulación)",
     cliente_telefono: body.phone || "987654321",
