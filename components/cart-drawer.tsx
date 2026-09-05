@@ -71,6 +71,11 @@ export function CartDrawer() {
                   <p className="font-mono text-xs mt-0.5" style={{ color: "rgba(36,31,28,0.55)" }}>
                     S/{item.price} c/u
                   </p>
+                  {(item.pan || item.papas) && (
+                    <p className="font-mono text-xs mt-0.5" style={{ color: "rgba(36,31,28,0.55)" }}>
+                      {[item.pan, item.papas].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
                   {item.cremas && item.cremas.length > 0 && (
                     <p className="font-mono text-xs mt-0.5" style={{ color: "rgba(36,31,28,0.55)" }}>
                       Cremas: {item.cremas.join(", ")}

@@ -2,7 +2,7 @@
 // dentro de Vitest. Sin vite-tsconfig-paths, este import no resuelve y toda
 // la fase se cae -- por eso el import es via "@/lib/menu", nunca relativo.
 import { describe, expect, it } from "vitest";
-import { getMenuItem, MENU_ITEMS, CATEGORIES, CATEGORIAS_CON_CREMAS, categoriaAdmiteCremas } from "@/lib/menu";
+import { getMenuItem, MENU_ITEMS, CATEGORIES, CATEGORIAS_CON_CREMAS, categoriaAdmiteCremas, CATEGORIAS_CON_PAN_PAPAS, categoriaAdmitePanPapas } from "@/lib/menu";
 
 describe("lib/menu", () => {
   it("getMenuItem(1) devuelve Miami Night a S/18", () => {
@@ -58,6 +58,32 @@ describe("lib/menu", () => {
       expect(categoriaAdmiteCremas("Salchipapas / Power Plates")).toBe(true);
       expect(categoriaAdmiteCremas("Combos xtremos")).toBe(true);
       expect(categoriaAdmiteCremas("Hamburguesas")).toBe(true);
+    });
+  });
+
+  describe("CATEGORIAS_CON_PAN_PAPAS", () => {
+    it("solo incluye Burgers (a diferencia de cremas, que aplica a casi toda la carta)", () => {
+      expect(CATEGORIAS_CON_PAN_PAPAS).toEqual(["Burgers"]);
+    });
+  });
+
+  describe("categoriaAdmitePanPapas", () => {
+    it("es allow-list: true solo para Hamburguesas, la categoria real de la DB", () => {
+      expect(categoriaAdmitePanPapas("Hamburguesas")).toBe(true);
+    });
+
+    it("es false para el resto de categorias reales de la DB", () => {
+      expect(categoriaAdmitePanPapas("Enchiladas")).toBe(false);
+      expect(categoriaAdmitePanPapas("Broaster")).toBe(false);
+      expect(categoriaAdmitePanPapas("Salchipapas / Power Plates")).toBe(false);
+      expect(categoriaAdmitePanPapas("Combos xtremos")).toBe(false);
+      expect(categoriaAdmitePanPapas("Bebidas")).toBe(false);
+    });
+
+    it("es false (fail-closed) para undefined, null y string vacio", () => {
+      expect(categoriaAdmitePanPapas(undefined)).toBe(false);
+      expect(categoriaAdmitePanPapas(null)).toBe(false);
+      expect(categoriaAdmitePanPapas("")).toBe(false);
     });
   });
 });

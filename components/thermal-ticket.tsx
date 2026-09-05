@@ -22,7 +22,9 @@ export function formatTicketText(o: Order): string {
       const name = it.name.length > 17 ? it.name.slice(0, 16) + "." : it.name.padEnd(17);
       const subtotal = formatPrice(it.price * it.qty).padStart(8);
       const linea = `${it.qty}x ${name} ${subtotal}`;
-      return it.cremas?.length ? `${linea}\n   Cremas: ${it.cremas.join(", ")}` : linea;
+      const panPapas = [it.pan, it.papas].filter(Boolean).join(", ");
+      const extra = [panPapas, it.cremas?.length ? `Cremas: ${it.cremas.join(", ")}` : ""].filter(Boolean);
+      return extra.length ? `${linea}\n   ${extra.join("\n   ")}` : linea;
     })
     .join("\n");
 
@@ -111,6 +113,12 @@ export function ThermalPrintArea({ order }: { order: Order | null }) {
                 {formatPrice(it.price * it.qty)}
               </span>
             </div>
+            {(it.pan || it.papas) && (
+              <div style={{ fontSize: "12px", fontWeight: "900", paddingLeft: "10px", textTransform: "uppercase" }}>
+                {it.pan && <>+ PAN: {it.pan}<br /></>}
+                {it.papas && <>+ PAPAS: {it.papas}</>}
+              </div>
+            )}
             {it.cremas && it.cremas.length > 0 && (
               <div style={{ fontSize: "12px", fontWeight: "900", paddingLeft: "10px", textTransform: "uppercase" }}>
                 + CREMAS: {it.cremas.join(" / ")}
@@ -247,6 +255,11 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
                       </span>
                       <span className="shrink-0">{formatPrice(it.price * it.qty)}</span>
                     </div>
+                    {(it.pan || it.papas) && (
+                      <div className="text-[10px] font-semibold text-neutral-600 pl-3">
+                        {[it.pan, it.papas].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
                     {it.cremas && it.cremas.length > 0 && (
                       <div className="text-[10px] font-semibold text-neutral-600 pl-3">
                         Cremas: {it.cremas.join(", ")}

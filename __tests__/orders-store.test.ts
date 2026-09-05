@@ -154,4 +154,28 @@ describe("buildWhatsAppUrl (comportamiento actual)", () => {
     const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
     expect(text).toContain("1x Miami Night (Ají, Tártara) - S/18");
   });
+
+  it("incluye pan y papas junto con las cremas en un solo parentesis", () => {
+    const order = construirOrderLocal({
+      ...baseInput,
+      items: [{
+        id: 5, name: "Burgazo", price: 28, qty: 1,
+        cremas: ["Ketchup"], pan: "Pan francés", papas: "Fritas",
+      }],
+      total: 28,
+    });
+    const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
+    expect(text).toContain("1x Burgazo (Ketchup, Pan francés, Fritas) - S/28");
+  });
+
+  it("items sin cremas ni pan/papas no agregan parentesis vacio", () => {
+    const order = construirOrderLocal({
+      ...baseInput,
+      items: [{ id: 10, name: "Gaseosa", price: 5, qty: 1 }],
+      total: 5,
+    });
+    const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
+    expect(text).toContain("1x Gaseosa - S/5");
+    expect(text).not.toContain("()");
+  });
 });

@@ -44,6 +44,21 @@ export function categoriaAdmiteCremas(category: string | null | undefined): bool
   return !CATEGORIAS_SIN_CREMAS.includes(category.trim());
 }
 
+// Pan y papas son exclusivos de hamburguesas (a diferencia de cremas, que
+// aplica a casi toda la carta) -- por eso esto SI es allow-list, no deny-list.
+export const CATEGORIAS_CON_PAN_PAPAS = ["Burgers"];
+export const PAN_OPCIONES = ["Pan de hamburguesa", "Pan francés"];
+export const PAPAS_OPCIONES = ["Fritas", "Al hilo"];
+
+// Nombre real en la tabla menu_items (taxonomia de Postgres), distinto del
+// nombre estatico de arriba -- misma razon que categoriaAdmiteCremas.
+const CATEGORIAS_DB_CON_PAN_PAPAS = ["Hamburguesas"];
+
+export function categoriaAdmitePanPapas(category: string | null | undefined): boolean {
+  if (!category) return false;
+  return CATEGORIAS_DB_CON_PAN_PAPAS.includes(category.trim());
+}
+
 // Precios por confirmar con la carta oficial de Jaime.
 export const MENU_ITEMS: MenuItem[] = [
   { id: 13, category: "Combos",       name: "Combo Lobo",            description: "Burger de la casa + Salchipapa Clasica + Gaseosa.",                        price: 25, badge: "AHORRA S/8",  originalPrice: 33,   image: "/images/menu/a.webp",                     agotado: false },

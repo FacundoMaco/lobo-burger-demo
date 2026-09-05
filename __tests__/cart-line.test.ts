@@ -21,6 +21,24 @@ describe("cartLineId", () => {
   it("distinto id produce distinto lineId aunque las cremas sean iguales", () => {
     expect(cartLineId(13, ["Ketchup"])).not.toBe(cartLineId(14, ["Ketchup"]));
   });
+
+  it("distinto pan produce distinto lineId con las mismas cremas", () => {
+    expect(cartLineId(5, ["Ketchup"], "Pan de hamburguesa")).not.toBe(
+      cartLineId(5, ["Ketchup"], "Pan francés")
+    );
+  });
+
+  it("distintas papas producen distinto lineId con el mismo pan", () => {
+    expect(cartLineId(5, [], "Pan francés", "Fritas")).not.toBe(
+      cartLineId(5, [], "Pan francés", "Al hilo")
+    );
+  });
+
+  it("mismo pan y papas producen el mismo lineId", () => {
+    expect(cartLineId(5, [], "Pan de hamburguesa", "Al hilo")).toBe(
+      cartLineId(5, [], "Pan de hamburguesa", "Al hilo")
+    );
+  });
 });
 
 describe("mergeIntoCart", () => {
@@ -69,6 +87,22 @@ describe("mergeIntoCart", () => {
     expect(result[0].lineId).not.toBe(result[1].lineId);
   });
 
+  it("mismo pan/papas mergean en la linea existente", () => {
+    const conPan = { id: 5, name: "Burgazo", price: 28, pan: "Pan francés", papas: "Fritas" };
+    const prev = mergeIntoCart([], conPan);
+    const result = mergeIntoCart(prev, { ...conPan });
+    expect(result).toHaveLength(1);
+    expect(result[0].qty).toBe(2);
+  });
+
+  it("distinto pan agrega una segunda linea con el mismo id", () => {
+    const conPanClasico = { id: 5, name: "Burgazo", price: 28, pan: "Pan de hamburguesa" };
+    const conPanFrances = { id: 5, name: "Burgazo", price: 28, pan: "Pan francés" };
+    const prev = mergeIntoCart([], conPanClasico);
+    const result = mergeIntoCart(prev, conPanFrances);
+    expect(result).toHaveLength(2);
+  });
+
   it("dos items sin cremas del mismo id mergean (paridad con Bebidas / promo-slider)", () => {
     const gaseosa = { id: 10, name: "Gaseosa", price: 5 };
     const prev = mergeIntoCart([], gaseosa);
@@ -96,6 +130,14 @@ describe("normalizarLineas", () => {
     const saved = [{ id: 2, name: "Doble Carne", price: 24, qty: 1, cremas: ["Ketchup", "Ají"] }];
     const result = normalizarLineas(saved);
     expect(result[0].lineId).toBe(cartLineId(2, ["Ketchup", "Ají"]));
+  });
+
+  it("deriva el lineId incluyendo pan/papas cuando falta", () => {
+    const saved = [{ id: 5, name: "Burgazo", price: 28, qty: 1, pan: "Pan francés", papas: "Fritas" }];
+    const result = normalizarLineas(saved);
+    expect(result[0].lineId).toBe(cartLineId(5, undefined, "Pan francés", "Fritas"));
+    expect(result[0].pan).toBe("Pan francés");
+    expect(result[0].papas).toBe("Fritas");
   });
 
   it("colapsa duplicados que terminen con el mismo lineId", () => {

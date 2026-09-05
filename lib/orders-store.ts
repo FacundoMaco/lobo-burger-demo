@@ -20,7 +20,7 @@ export type Order = {
   address: string;
   lat?: number;
   lng?: number;
-  items: { id: number; name: string; price: number; qty: number; cremas?: string[] }[];
+  items: { id: number; name: string; price: number; qty: number; cremas?: string[]; pan?: string; papas?: string }[];
   total: number;
   status: OrderStatus;
 };

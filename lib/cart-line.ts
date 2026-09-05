@@ -10,22 +10,28 @@ export type CartItem = {
   price: number;
   qty: number;
   cremas?: string[];
+  pan?: string;
+  papas?: string;
 };
 
 // El orden en que el cliente toca los chips de cremas no debe crear una linea
 // nueva: se ordena antes de armar el string para que "Ketchup, Aji" y
-// "Aji, Ketchup" produzcan el mismo lineId.
-export function cartLineId(id: number, cremas?: string[]): string {
-  if (!cremas || cremas.length === 0) return String(id);
-  const normalizadas = [...cremas].sort();
-  return `${id}|${normalizadas.join(",")}`;
+// "Aji, Ketchup" produzcan el mismo lineId. pan/papas se suman al final del
+// string (son de eleccion unica, no necesitan orden) para que una unidad con
+// "Pan francés" y otra con "Pan de hamburguesa" del mismo item no se mezclen.
+export function cartLineId(id: number, cremas?: string[], pan?: string, papas?: string): string {
+  const cremasPart = cremas && cremas.length > 0 ? [...cremas].sort().join(",") : "";
+  const panPart = pan ?? "";
+  const papasPart = papas ?? "";
+  if (!cremasPart && !panPart && !papasPart) return String(id);
+  return `${id}|${cremasPart}|${panPart}|${papasPart}`;
 }
 
 export function mergeIntoCart(
   prev: CartItem[],
   item: Omit<CartItem, "qty" | "lineId">
 ): CartItem[] {
-  const lineId = cartLineId(item.id, item.cremas);
+  const lineId = cartLineId(item.id, item.cremas, item.pan, item.papas);
   const existing = prev.find((i) => i.lineId === lineId);
   if (existing) {
     return prev.map((i) => (i.lineId === lineId ? { ...i, qty: i.qty + 1 } : i));
@@ -48,7 +54,9 @@ export function normalizarLineas(saved: unknown): CartItem[] {
       continue;
     }
     const cremas = Array.isArray(r.cremas) ? (r.cremas as string[]) : undefined;
-    const lineId = typeof r.lineId === "string" ? r.lineId : cartLineId(r.id, cremas);
+    const pan = typeof r.pan === "string" ? r.pan : undefined;
+    const papas = typeof r.papas === "string" ? r.papas : undefined;
+    const lineId = typeof r.lineId === "string" ? r.lineId : cartLineId(r.id, cremas, pan, papas);
     const existing = result.find((i) => i.lineId === lineId);
     if (existing) {
       existing.qty += r.qty;
@@ -61,6 +69,8 @@ export function normalizarLineas(saved: unknown): CartItem[] {
       price: r.price,
       qty: r.qty,
       cremas,
+      pan,
+      papas,
     });
   }
   return result;

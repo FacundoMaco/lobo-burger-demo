@@ -9,7 +9,7 @@ import { LocationBar } from "@/components/location-bar";
 import { PromoSlider, type HeroPromo } from "@/components/promo-slider";
 import { CheeseDrip } from "@/components/cheese-drip";
 import { Plus, Minus, Check, Phone, Clock, Bike, MapPin, BookText } from "lucide-react";
-import { MENU_ITEMS as menuItems, CATEGORIES as categories, type MenuItem, CATEGORIAS_CON_CREMAS, CREMAS_OPCIONES, CREMAS_MAX } from "@/lib/menu";
+import { MENU_ITEMS as menuItems, CATEGORIES as categories, type MenuItem, CATEGORIAS_CON_CREMAS, CREMAS_OPCIONES, CREMAS_MAX, CATEGORIAS_CON_PAN_PAPAS, PAN_OPCIONES, PAPAS_OPCIONES } from "@/lib/menu";
 
 const BG = "#FFFDF8";
 const PRIMARY = "#F5A623";
@@ -67,15 +67,27 @@ function MenuCard({ item }: { item: MenuItem }) {
   const [added, setAdded] = useState(false);
   const [pickingCremas, setPickingCremas] = useState(false);
   const [cremas, setCremas] = useState<string[]>([]);
+  const [pan, setPan] = useState(PAN_OPCIONES[0]);
+  const [papas, setPapas] = useState(PAPAS_OPCIONES[1]);
   const lineas = items.filter(i => i.id === item.id);
   const enCarrito = lineas.reduce((s, l) => s + l.qty, 0);
   const llevaCremas = CATEGORIAS_CON_CREMAS.includes(item.category);
+  const llevaPanPapas = CATEGORIAS_CON_PAN_PAPAS.includes(item.category);
 
-  const confirmAdd = (cremasElegidas?: string[]) => {
-    add({ id: item.id, name: item.name, price: item.price, cremas: cremasElegidas?.length ? cremasElegidas : undefined });
+  const confirmAdd = (cremasElegidas?: string[], panElegido?: string, papasElegido?: string) => {
+    add({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      cremas: cremasElegidas?.length ? cremasElegidas : undefined,
+      pan: llevaPanPapas ? panElegido : undefined,
+      papas: llevaPanPapas ? papasElegido : undefined,
+    });
     setAdded(true);
     setPickingCremas(false);
     setCremas([]);
+    setPan(PAN_OPCIONES[0]);
+    setPapas(PAPAS_OPCIONES[1]);
     setTimeout(() => setAdded(false), 900);
   };
 
@@ -182,6 +194,46 @@ function MenuCard({ item }: { item: MenuItem }) {
 
         {pickingCremas && (
           <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(36,31,28,0.07)" }}>
+            {llevaPanPapas && (
+              <>
+                <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(36,31,28,0.6)" }}>
+                  Tipo de pan
+                </p>
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  {PAN_OPCIONES.map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPan(p)}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer"
+                      style={{
+                        background: pan === p ? PRIMARY : "rgba(36,31,28,0.06)",
+                        color: pan === p ? INK : "rgba(36,31,28,0.65)",
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(36,31,28,0.6)" }}>
+                  Papas
+                </p>
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  {PAPAS_OPCIONES.map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPapas(p)}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer"
+                      style={{
+                        background: papas === p ? PRIMARY : "rgba(36,31,28,0.06)",
+                        color: papas === p ? INK : "rgba(36,31,28,0.65)",
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(36,31,28,0.6)" }}>
               {enCarrito > 0 ? `Cremas para la unidad #${enCarrito + 1} (max ${CREMAS_MAX})` : `Cremas (max ${CREMAS_MAX})`}
             </p>
@@ -205,14 +257,14 @@ function MenuCard({ item }: { item: MenuItem }) {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => { setPickingCremas(false); setCremas([]); }}
+                onClick={() => { setPickingCremas(false); setCremas([]); setPan(PAN_OPCIONES[0]); setPapas(PAPAS_OPCIONES[1]); }}
                 className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase"
                 style={{ background: "rgba(36,31,28,0.08)", color: INK }}
               >
                 Cancelar
               </button>
               <button
-                onClick={() => confirmAdd(cremas)}
+                onClick={() => confirmAdd(cremas, pan, papas)}
                 className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase"
                 style={{ background: PRIMARY, color: INK }}
               >

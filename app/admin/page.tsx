@@ -756,6 +756,9 @@ export default function AdminPage() {
                     {formatPrice(item.price * item.qty)}
                   </span>
                 </p>
+                {(item.pan || item.papas) && (
+                  <p className="text-[10px] pl-5" style={{ color: "#888" }}>{[item.pan, item.papas].filter(Boolean).join(" · ")}</p>
+                )}
                 {item.cremas && item.cremas.length > 0 && (
                   <p className="text-[10px] pl-5" style={{ color: "#888" }}>Cremas: {item.cremas.join(", ")}</p>
                 )}
