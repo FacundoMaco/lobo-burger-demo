@@ -240,7 +240,13 @@
 }
 @media print {
   @page {
-    size: 80mm auto;
+    /* Ancho + alto fijos, sin "auto": el driver de Windows de la ticketera
+       no siempre resuelve altura continua y Chrome termina negociando un
+       tamaño de página propio (visto como "91" en el diálogo de impresión),
+       reescalando toda la comanda y dejándola diminuta. Con altura fija de
+       sobra, Chrome nunca necesita adivinar y el rollo sigue avanzando/
+       cortando según el driver de la impresora, no según esta página. */
+    size: 80mm 200mm;
     margin: 0;
   }
   body * {

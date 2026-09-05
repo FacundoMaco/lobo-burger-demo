@@ -338,6 +338,11 @@ export function PrinterHelpModal({ isOpen, onClose }: { isOpen: boolean; onClose
               <li>Márgenes: <strong>Ninguno (None)</strong>.</li>
               <li>Gráficos de fondo: <strong>Activado</strong>.</li>
               <li>Encabezados y pies de página: <strong>Desactivado</strong>.</li>
+              <li>
+                Si Chrome muestra un tamaño de papel <strong>&quot;Personalizado&quot;</strong> con un
+                ancho distinto a 80mm (por ejemplo 91mm), cambialo a <strong>80mm</strong> — con otro
+                ancho la comanda sale achicada para encajar en esa medida.
+              </li>
             </ul>
           </div>
 
