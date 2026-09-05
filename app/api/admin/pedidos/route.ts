@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     email?: string;
     delivery?: boolean;
     address?: string;
-    items?: { id: number; name: string; price: number; qty: number }[];
+    items?: { id: number; name: string; price: number; qty: number; cremas?: string[]; pan?: string; papas?: string; comentario?: string }[];
     total_centimos?: number;
   } = {};
 
@@ -94,7 +94,11 @@ export async function POST(request: Request) {
     delivery: body.delivery ?? true,
     direccion: body.address || "Av. Angamos Este 1551, Surquillo",
     items: body.items || [
-      { id: 5, name: "Burgazo", price: 28, qty: 1 },
+      {
+        id: 5, name: "Burgazo", price: 28, qty: 1,
+        cremas: ["Ketchup", "Ají"], pan: "Pan francés", papas: "Al hilo",
+        comentario: "Sin cebolla por favor",
+      },
       { id: 13, name: "Combo Lobo", price: 25, qty: 1 },
     ],
     total_centimos: body.total_centimos || 5300,

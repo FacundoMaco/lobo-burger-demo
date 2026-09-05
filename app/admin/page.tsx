@@ -394,7 +394,11 @@ export default function AdminPage() {
       delivery: true,
       address: "Av. Angamos Este 1551, Surquillo",
       items: [
-        { id: 5, name: "Burgazo", price: 28, qty: 1 },
+        {
+          id: 5, name: "Burgazo", price: 28, qty: 1,
+          cremas: ["Ketchup", "Ají"], pan: "Pan francés", papas: "Al hilo",
+          comentario: "Sin cebolla por favor",
+        },
         { id: 13, name: "Combo Lobo", price: 25, qty: 1 },
       ],
       total: 53,
