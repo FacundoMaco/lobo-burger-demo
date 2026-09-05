@@ -12,26 +12,29 @@ export type CartItem = {
   cremas?: string[];
   pan?: string;
   papas?: string;
+  comentario?: string;
 };
 
 // El orden en que el cliente toca los chips de cremas no debe crear una linea
 // nueva: se ordena antes de armar el string para que "Ketchup, Aji" y
-// "Aji, Ketchup" produzcan el mismo lineId. pan/papas se suman al final del
-// string (son de eleccion unica, no necesitan orden) para que una unidad con
-// "Pan francés" y otra con "Pan de hamburguesa" del mismo item no se mezclen.
-export function cartLineId(id: number, cremas?: string[], pan?: string, papas?: string): string {
+// "Aji, Ketchup" produzcan el mismo lineId. pan/papas/comentario se suman al
+// final del string (no necesitan orden) para que una unidad con
+// "Pan francés" y otra con "Pan de hamburguesa" -- o con distinto comentario
+// libre -- del mismo item no se mezclen bajo el mismo qty.
+export function cartLineId(id: number, cremas?: string[], pan?: string, papas?: string, comentario?: string): string {
   const cremasPart = cremas && cremas.length > 0 ? [...cremas].sort().join(",") : "";
   const panPart = pan ?? "";
   const papasPart = papas ?? "";
-  if (!cremasPart && !panPart && !papasPart) return String(id);
-  return `${id}|${cremasPart}|${panPart}|${papasPart}`;
+  const comentarioPart = comentario ?? "";
+  if (!cremasPart && !panPart && !papasPart && !comentarioPart) return String(id);
+  return `${id}|${cremasPart}|${panPart}|${papasPart}|${comentarioPart}`;
 }
 
 export function mergeIntoCart(
   prev: CartItem[],
   item: Omit<CartItem, "qty" | "lineId">
 ): CartItem[] {
-  const lineId = cartLineId(item.id, item.cremas, item.pan, item.papas);
+  const lineId = cartLineId(item.id, item.cremas, item.pan, item.papas, item.comentario);
   const existing = prev.find((i) => i.lineId === lineId);
   if (existing) {
     return prev.map((i) => (i.lineId === lineId ? { ...i, qty: i.qty + 1 } : i));
@@ -56,7 +59,8 @@ export function normalizarLineas(saved: unknown): CartItem[] {
     const cremas = Array.isArray(r.cremas) ? (r.cremas as string[]) : undefined;
     const pan = typeof r.pan === "string" ? r.pan : undefined;
     const papas = typeof r.papas === "string" ? r.papas : undefined;
-    const lineId = typeof r.lineId === "string" ? r.lineId : cartLineId(r.id, cremas, pan, papas);
+    const comentario = typeof r.comentario === "string" ? r.comentario : undefined;
+    const lineId = typeof r.lineId === "string" ? r.lineId : cartLineId(r.id, cremas, pan, papas, comentario);
     const existing = result.find((i) => i.lineId === lineId);
     if (existing) {
       existing.qty += r.qty;
@@ -71,6 +75,7 @@ export function normalizarLineas(saved: unknown): CartItem[] {
       cremas,
       pan,
       papas,
+      comentario,
     });
   }
   return result;

@@ -44,6 +44,10 @@ export function categoriaAdmiteCremas(category: string | null | undefined): bool
   return !CATEGORIAS_SIN_CREMAS.includes(category.trim());
 }
 
+// Comentario libre del cliente por item (ej. "sin cebolla", "bien cocido").
+// Aplica a la misma cobertura que cremas -- toda la carta salvo Bebidas.
+export const COMENTARIO_MAX_LENGTH = 140;
+
 // Pan y papas son exclusivos de hamburguesas (a diferencia de cremas, que
 // aplica a casi toda la carta) -- por eso esto SI es allow-list, no deny-list.
 export const CATEGORIAS_CON_PAN_PAPAS = ["Burgers"];

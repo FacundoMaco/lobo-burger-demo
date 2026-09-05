@@ -136,7 +136,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           tokenId: tokenRes.tokenId,
           email: email.trim(),
-          items: items.map(i => ({ id: i.id, qty: i.qty, cremas: i.cremas, pan: i.pan, papas: i.papas })),
+          items: items.map(i => ({ id: i.id, qty: i.qty, cremas: i.cremas, pan: i.pan, papas: i.papas, comentario: i.comentario })),
           name: name.trim(),
           phone: phone.trim(),
           delivery: fulfillmentMode === "delivery",
@@ -181,7 +181,7 @@ export default function CheckoutPage() {
       containerId: CULQI_CONTAINER_ID,
       allowYape: false, // Solo tarjeta: no genera orden ni correos de PagoEfectivo
       pedido: {
-        items: items.map(i => ({ id: i.id, qty: i.qty, cremas: i.cremas, pan: i.pan, papas: i.papas })),
+        items: items.map(i => ({ id: i.id, qty: i.qty, cremas: i.cremas, pan: i.pan, papas: i.papas, comentario: i.comentario })),
         name: name.trim(),
         phone: phone.trim(),
         delivery: fulfillmentMode === "delivery",
@@ -306,6 +306,9 @@ export default function CheckoutPage() {
               )}
               {item.cremas && item.cremas.length > 0 && (
                 <p className="text-[11px] pl-3" style={{ color: "rgba(36,31,28,0.5)" }}>Cremas: {item.cremas.join(", ")}</p>
+              )}
+              {item.comentario && (
+                <p className="text-[11px] pl-3 italic" style={{ color: "rgba(36,31,28,0.5)" }}>&quot;{item.comentario}&quot;</p>
               )}
             </div>
           ))}

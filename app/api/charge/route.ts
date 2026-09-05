@@ -8,7 +8,7 @@ import * as Sentry from "@sentry/nextjs";
 // NOTA DE MANTENIMIENTO: Este archivo y app/api/culqi/order/route.ts duplican el
 // cálculo del total a propósito y deben mantenerse en sync a mano.
 import { getMenuItemLive } from "@/lib/menu-data";
-import { CREMAS_OPCIONES, CREMAS_MAX, categoriaAdmiteCremas, PAN_OPCIONES, PAPAS_OPCIONES, categoriaAdmitePanPapas } from "@/lib/menu";
+import { CREMAS_OPCIONES, CREMAS_MAX, categoriaAdmiteCremas, PAN_OPCIONES, PAPAS_OPCIONES, categoriaAdmitePanPapas, COMENTARIO_MAX_LENGTH } from "@/lib/menu";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { alertaTelegram } from "@/lib/alertas";
 import { validarEmail, validarTelefono } from "@/lib/validacion";
@@ -18,7 +18,7 @@ const MIN_CENTS = 300; // minimo que acepta Culqi
 const MAX_CENTS = 50000; // techo sano para un pedido web
 const MAX_QTY = 20; // por item, para que un pedido absurdo no pase
 
-type ItemPedido = { id: number; qty: number; cremas?: string[]; pan?: string; papas?: string };
+type ItemPedido = { id: number; qty: number; cremas?: string[]; pan?: string; papas?: string; comentario?: string };
 
 type Cuerpo = {
   tokenId?: string;
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 
   // ── Total calculado en el servidor (leído en vivo de Postgres sin caché) ──
   let totalCents = 0;
-  const detalle: { id: number; name: string; price: number; qty: number; cremas?: string[]; pan?: string; papas?: string }[] = [];
+  const detalle: { id: number; name: string; price: number; qty: number; cremas?: string[]; pan?: string; papas?: string; comentario?: string }[] = [];
   for (const linea of items) {
     if (!Number.isInteger(linea?.id) || !Number.isInteger(linea?.qty)) {
       return Response.json({ error: "Datos del pedido inválidos" }, { status: 400 });
@@ -133,6 +133,13 @@ export async function POST(request: Request) {
       }
       papas = linea.papas;
     }
+    let comentario: string | undefined;
+    if (linea.comentario !== undefined) {
+      if (typeof linea.comentario !== "string" || linea.comentario.length > COMENTARIO_MAX_LENGTH) {
+        return Response.json({ error: "Comentario inválido" }, { status: 400 });
+      }
+      comentario = linea.comentario.trim() || undefined;
+    }
     const item = await getMenuItemLive(linea.id);
     if (!item) {
       return Response.json({ error: "Hay un producto que ya no está disponible" }, { status: 400 });
@@ -146,6 +153,9 @@ export async function POST(request: Request) {
     if ((pan || papas) && !categoriaAdmitePanPapas(item.category)) {
       return Response.json({ error: "Ese producto no tiene opciones de pan ni papas" }, { status: 400 });
     }
+    if (comentario && !categoriaAdmiteCremas(item.category)) {
+      return Response.json({ error: "Ese producto no admite comentario" }, { status: 400 });
+    }
     totalCents += item.precio_centimos * linea.qty;
     detalle.push({
       id: item.id,
@@ -155,6 +165,7 @@ export async function POST(request: Request) {
       ...(cremas?.length ? { cremas } : {}),
       ...(pan ? { pan } : {}),
       ...(papas ? { papas } : {}),
+      ...(comentario ? { comentario } : {}),
     });
   }
 

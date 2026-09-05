@@ -81,6 +81,11 @@ export function CartDrawer() {
                       Cremas: {item.cremas.join(", ")}
                     </p>
                   )}
+                  {item.comentario && (
+                    <p className="text-xs mt-0.5 italic" style={{ color: "rgba(36,31,28,0.55)" }}>
+                      &quot;{item.comentario}&quot;
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button

@@ -9,7 +9,7 @@ import { LocationBar } from "@/components/location-bar";
 import { PromoSlider, type HeroPromo } from "@/components/promo-slider";
 import { CheeseDrip } from "@/components/cheese-drip";
 import { Plus, Minus, Check, Phone, Clock, Bike, MapPin, BookText } from "lucide-react";
-import { MENU_ITEMS as menuItems, CATEGORIES as categories, type MenuItem, CATEGORIAS_CON_CREMAS, CREMAS_OPCIONES, CREMAS_MAX, CATEGORIAS_CON_PAN_PAPAS, PAN_OPCIONES, PAPAS_OPCIONES } from "@/lib/menu";
+import { MENU_ITEMS as menuItems, CATEGORIES as categories, type MenuItem, CATEGORIAS_CON_CREMAS, CREMAS_OPCIONES, CREMAS_MAX, CATEGORIAS_CON_PAN_PAPAS, PAN_OPCIONES, PAPAS_OPCIONES, COMENTARIO_MAX_LENGTH } from "@/lib/menu";
 
 const BG = "#FFFDF8";
 const PRIMARY = "#F5A623";
@@ -69,12 +69,13 @@ function MenuCard({ item }: { item: MenuItem }) {
   const [cremas, setCremas] = useState<string[]>([]);
   const [pan, setPan] = useState(PAN_OPCIONES[0]);
   const [papas, setPapas] = useState(PAPAS_OPCIONES[1]);
+  const [comentario, setComentario] = useState("");
   const lineas = items.filter(i => i.id === item.id);
   const enCarrito = lineas.reduce((s, l) => s + l.qty, 0);
   const llevaCremas = CATEGORIAS_CON_CREMAS.includes(item.category);
   const llevaPanPapas = CATEGORIAS_CON_PAN_PAPAS.includes(item.category);
 
-  const confirmAdd = (cremasElegidas?: string[], panElegido?: string, papasElegido?: string) => {
+  const confirmAdd = (cremasElegidas?: string[], panElegido?: string, papasElegido?: string, comentarioElegido?: string) => {
     add({
       id: item.id,
       name: item.name,
@@ -82,12 +83,14 @@ function MenuCard({ item }: { item: MenuItem }) {
       cremas: cremasElegidas?.length ? cremasElegidas : undefined,
       pan: llevaPanPapas ? panElegido : undefined,
       papas: llevaPanPapas ? papasElegido : undefined,
+      comentario: comentarioElegido?.trim() ? comentarioElegido.trim() : undefined,
     });
     setAdded(true);
     setPickingCremas(false);
     setCremas([]);
     setPan(PAN_OPCIONES[0]);
     setPapas(PAPAS_OPCIONES[1]);
+    setComentario("");
     setTimeout(() => setAdded(false), 900);
   };
 
@@ -255,16 +258,28 @@ function MenuCard({ item }: { item: MenuItem }) {
                 );
               })}
             </div>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(36,31,28,0.6)" }}>
+              Algún comentario (opcional)
+            </p>
+            <textarea
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value.slice(0, COMENTARIO_MAX_LENGTH))}
+              maxLength={COMENTARIO_MAX_LENGTH}
+              placeholder="Ej: sin cebolla, bien cocido..."
+              rows={2}
+              className="w-full px-2.5 py-1.5 rounded-lg text-[11px] mb-2.5 resize-none outline-none"
+              style={{ background: "rgba(36,31,28,0.06)", color: INK }}
+            />
             <div className="flex gap-2">
               <button
-                onClick={() => { setPickingCremas(false); setCremas([]); setPan(PAN_OPCIONES[0]); setPapas(PAPAS_OPCIONES[1]); }}
+                onClick={() => { setPickingCremas(false); setCremas([]); setPan(PAN_OPCIONES[0]); setPapas(PAPAS_OPCIONES[1]); setComentario(""); }}
                 className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase"
                 style={{ background: "rgba(36,31,28,0.08)", color: INK }}
               >
                 Cancelar
               </button>
               <button
-                onClick={() => confirmAdd(cremas, pan, papas)}
+                onClick={() => confirmAdd(cremas, pan, papas, comentario)}
                 className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase"
                 style={{ background: PRIMARY, color: INK }}
               >

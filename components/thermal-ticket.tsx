@@ -22,8 +22,15 @@ export function formatTicketText(o: Order): string {
       const name = it.name.length > 17 ? it.name.slice(0, 16) + "." : it.name.padEnd(17);
       const subtotal = formatPrice(it.price * it.qty).padStart(8);
       const linea = `${it.qty}x ${name} ${subtotal}`;
-      const panPapas = [it.pan, it.papas].filter(Boolean).join(", ");
-      const extra = [panPapas, it.cremas?.length ? `Cremas: ${it.cremas.join(", ")}` : ""].filter(Boolean);
+      // Estilo comanda de delivery (Rappi/Hurrier): cada modificador en su
+      // propia sub-linea con titulo, no todo condensado en una sola linea --
+      // asi cocina ve la orden completa detallada de un vistazo.
+      const extra = [
+        it.comentario ? `"${it.comentario}"` : "",
+        it.pan ? `PAN: ${it.pan}` : "",
+        it.papas ? `PAPAS: ${it.papas}` : "",
+        it.cremas?.length ? `CREMAS: ${it.cremas.join(", ")}` : "",
+      ].filter(Boolean);
       return extra.length ? `${linea}\n   ${extra.join("\n   ")}` : linea;
     })
     .join("\n");
@@ -104,7 +111,7 @@ export function ThermalPrintArea({ order }: { order: Order | null }) {
           <span>SUBTOTAL</span>
         </div>
         {order.items.map((it, idx) => (
-          <div key={idx} style={{ marginBottom: "5px" }}>
+          <div key={idx} style={{ marginBottom: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "15px", fontWeight: "800", lineHeight: "1.2" }}>
               <span style={{ paddingRight: "6px" }}>
                 <strong>{it.qty}x</strong> {it.name}
@@ -113,15 +120,32 @@ export function ThermalPrintArea({ order }: { order: Order | null }) {
                 {formatPrice(it.price * it.qty)}
               </span>
             </div>
-            {(it.pan || it.papas) && (
-              <div style={{ fontSize: "12px", fontWeight: "900", paddingLeft: "10px", textTransform: "uppercase" }}>
-                {it.pan && <>+ PAN: {it.pan}<br /></>}
-                {it.papas && <>+ PAPAS: {it.papas}</>}
+            {/* Comentario libre del cliente: primero y mas destacado, es lo
+                que mas cambia la preparacion (ej. "sin cebolla"). */}
+            {it.comentario && (
+              <div style={{ fontSize: "13px", fontWeight: "900", paddingLeft: "10px", marginTop: "3px", border: "2px solid #000", padding: "3px 5px" }}>
+                &quot;{it.comentario}&quot;
+              </div>
+            )}
+            {/* Cada modificador como su propia sub-seccion con titulo,
+                estilo comanda de delivery (Rappi/Hurrier), en vez de una
+                sola linea condensada -- se lee de un vistazo en cocina. */}
+            {it.pan && (
+              <div style={{ paddingLeft: "10px", marginTop: "3px" }}>
+                <div style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase" }}>PAN</div>
+                <div style={{ fontSize: "13px", fontWeight: "900" }}>{it.pan}</div>
+              </div>
+            )}
+            {it.papas && (
+              <div style={{ paddingLeft: "10px", marginTop: "3px" }}>
+                <div style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase" }}>PAPAS</div>
+                <div style={{ fontSize: "13px", fontWeight: "900" }}>{it.papas}</div>
               </div>
             )}
             {it.cremas && it.cremas.length > 0 && (
-              <div style={{ fontSize: "12px", fontWeight: "900", paddingLeft: "10px", textTransform: "uppercase" }}>
-                + CREMAS: {it.cremas.join(" / ")}
+              <div style={{ paddingLeft: "10px", marginTop: "3px" }}>
+                <div style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase" }}>CREMAS</div>
+                <div style={{ fontSize: "13px", fontWeight: "900" }}>{it.cremas.join(" / ")}</div>
               </div>
             )}
           </div>
@@ -255,14 +279,27 @@ export function ThermalTicketModal({ order, onClose }: ThermalTicketModalProps) 
                       </span>
                       <span className="shrink-0">{formatPrice(it.price * it.qty)}</span>
                     </div>
-                    {(it.pan || it.papas) && (
-                      <div className="text-[10px] font-semibold text-neutral-600 pl-3">
-                        {[it.pan, it.papas].filter(Boolean).join(" · ")}
+                    {it.comentario && (
+                      <div className="text-[11px] font-bold pl-3 mt-0.5 border border-black inline-block px-1.5 py-0.5">
+                        &quot;{it.comentario}&quot;
+                      </div>
+                    )}
+                    {it.pan && (
+                      <div className="pl-3 mt-0.5">
+                        <span className="text-[9px] font-bold text-neutral-500 uppercase block">Pan</span>
+                        <span className="text-xs font-bold">{it.pan}</span>
+                      </div>
+                    )}
+                    {it.papas && (
+                      <div className="pl-3 mt-0.5">
+                        <span className="text-[9px] font-bold text-neutral-500 uppercase block">Papas</span>
+                        <span className="text-xs font-bold">{it.papas}</span>
                       </div>
                     )}
                     {it.cremas && it.cremas.length > 0 && (
-                      <div className="text-[10px] font-semibold text-neutral-600 pl-3">
-                        Cremas: {it.cremas.join(", ")}
+                      <div className="pl-3 mt-0.5">
+                        <span className="text-[9px] font-bold text-neutral-500 uppercase block">Cremas</span>
+                        <span className="text-xs font-bold">{it.cremas.join(", ")}</span>
                       </div>
                     )}
                   </div>

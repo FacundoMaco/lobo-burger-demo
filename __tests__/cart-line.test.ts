@@ -39,6 +39,22 @@ describe("cartLineId", () => {
       cartLineId(5, [], "Pan de hamburguesa", "Al hilo")
     );
   });
+
+  it("distinto comentario produce distinto lineId con las mismas cremas", () => {
+    expect(cartLineId(5, ["Ketchup"], undefined, undefined, "sin cebolla")).not.toBe(
+      cartLineId(5, ["Ketchup"], undefined, undefined, "bien cocido")
+    );
+  });
+
+  it("mismo comentario produce el mismo lineId", () => {
+    expect(cartLineId(5, undefined, "Pan francés", "Fritas", "sin cebolla")).toBe(
+      cartLineId(5, undefined, "Pan francés", "Fritas", "sin cebolla")
+    );
+  });
+
+  it("sin comentario equivale a comentario vacio", () => {
+    expect(cartLineId(5)).toBe(cartLineId(5, undefined, undefined, undefined, ""));
+  });
 });
 
 describe("mergeIntoCart", () => {
@@ -103,6 +119,22 @@ describe("mergeIntoCart", () => {
     expect(result).toHaveLength(2);
   });
 
+  it("mismo comentario mergea en la linea existente", () => {
+    const conComentario = { id: 5, name: "Burgazo", price: 28, comentario: "sin cebolla" };
+    const prev = mergeIntoCart([], conComentario);
+    const result = mergeIntoCart(prev, { ...conComentario });
+    expect(result).toHaveLength(1);
+    expect(result[0].qty).toBe(2);
+  });
+
+  it("distinto comentario agrega una segunda linea con el mismo id", () => {
+    const sinCebolla = { id: 5, name: "Burgazo", price: 28, comentario: "sin cebolla" };
+    const bienCocido = { id: 5, name: "Burgazo", price: 28, comentario: "bien cocido" };
+    const prev = mergeIntoCart([], sinCebolla);
+    const result = mergeIntoCart(prev, bienCocido);
+    expect(result).toHaveLength(2);
+  });
+
   it("dos items sin cremas del mismo id mergean (paridad con Bebidas / promo-slider)", () => {
     const gaseosa = { id: 10, name: "Gaseosa", price: 5 };
     const prev = mergeIntoCart([], gaseosa);
@@ -138,6 +170,13 @@ describe("normalizarLineas", () => {
     expect(result[0].lineId).toBe(cartLineId(5, undefined, "Pan francés", "Fritas"));
     expect(result[0].pan).toBe("Pan francés");
     expect(result[0].papas).toBe("Fritas");
+  });
+
+  it("deriva el lineId incluyendo comentario cuando falta", () => {
+    const saved = [{ id: 5, name: "Burgazo", price: 28, qty: 1, comentario: "sin cebolla" }];
+    const result = normalizarLineas(saved);
+    expect(result[0].lineId).toBe(cartLineId(5, undefined, undefined, undefined, "sin cebolla"));
+    expect(result[0].comentario).toBe("sin cebolla");
   });
 
   it("colapsa duplicados que terminen con el mismo lineId", () => {

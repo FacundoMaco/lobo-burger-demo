@@ -36,7 +36,8 @@ export function buildWhatsAppUrl(order: Order, opts?: { to?: string; includeGps?
   const to = opts?.to ?? WHATSAPP_NUMBER;
   const lines = order.items.map(i => {
     const detalle = [...(i.cremas ?? []), i.pan, i.papas].filter(Boolean).join(", ");
-    return `- ${i.qty}x ${i.name}${detalle ? ` (${detalle})` : ""} - ${formatPrice(i.price * i.qty)}`;
+    const linea = `- ${i.qty}x ${i.name}${detalle ? ` (${detalle})` : ""} - ${formatPrice(i.price * i.qty)}`;
+    return i.comentario ? `${linea}\n  "${i.comentario}"` : linea;
   }).join("\n");
   const deliveryLine = order.delivery ? `Delivery a: ${order.address}` : "Para recoger";
   const gpsLine = opts?.includeGps && order.lat != null && order.lng != null
@@ -104,7 +105,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const submitOrder = (data: { name: string; phone: string; email?: string; culqiChargeId?: string; delivery: boolean; address: string }): Order => {
     const order = construirOrderLocal({
       ...data,
-      items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, cremas: i.cremas, pan: i.pan, papas: i.papas })),
+      items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, cremas: i.cremas, pan: i.pan, papas: i.papas, comentario: i.comentario })),
       total,
     });
     clear();

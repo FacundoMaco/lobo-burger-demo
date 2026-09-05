@@ -178,4 +178,27 @@ describe("buildWhatsAppUrl (comportamiento actual)", () => {
     expect(text).toContain("1x Gaseosa - S/5");
     expect(text).not.toContain("()");
   });
+
+  it("agrega el comentario del cliente en una linea propia debajo del item", () => {
+    const order = construirOrderLocal({
+      ...baseInput,
+      items: [{
+        id: 5, name: "Burgazo", price: 28, qty: 1,
+        cremas: ["Ketchup"], comentario: "sin cebolla por favor",
+      }],
+      total: 28,
+    });
+    const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
+    expect(text).toContain('- 1x Burgazo (Ketchup) - S/28.00\n  "sin cebolla por favor"');
+  });
+
+  it("items sin comentario no agregan linea extra", () => {
+    const order = construirOrderLocal({
+      ...baseInput,
+      items: [{ id: 10, name: "Gaseosa", price: 5, qty: 1 }],
+      total: 5,
+    });
+    const text = decodeURIComponent(buildWhatsAppUrl(order).split("?text=")[1]);
+    expect(text).not.toContain('"');
+  });
 });
